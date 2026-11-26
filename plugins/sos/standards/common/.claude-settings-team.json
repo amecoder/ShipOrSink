@@ -1,0 +1,145 @@
+{
+  "$schema": "https://json.schemastore.org/claude-code-settings.json",
+  "_comment": "Team-shared Claude Code settings. Copy to .claude/settings.json in your project. env.TEST_RECEIPT_REQUIRED=0 disables the test-receipt gate for repos without a test suite (human decision). env.TEST_CMD='<exact command>' turns on strict mode: only that command earns a receipt. Receipts live in <git common dir>/claude/receipts.json; hooks need python3. Bash-level protection of hooks/settings/receipts is done by pre-tool-use-guard.sh (reads allowed, writes blocked) rather than coarse deny globs.",
+  "permissions": {
+    "allow": [
+      "Read",
+      "Glob",
+      "Grep",
+      "Bash(ruff *)",
+      "Bash(mypy *)",
+      "Bash(pytest *)",
+      "Bash(ktlint *)",
+      "Bash(detekt *)",
+      "Bash(gradle test*)",
+      "Bash(gradle check*)",
+      "Bash(corepack *)",
+      "Bash(npm run *)",
+      "Bash(npm test*)",
+      "Bash(npx *)",
+      "Bash(pnpm *)",
+      "Bash(yarn *)",
+      "Bash(bun *)",
+      "Bash(vitest *)",
+      "Bash(go test *)",
+      "Bash(golangci-lint *)",
+      "Bash(terraform fmt *)",
+      "Bash(terraform validate*)",
+      "Bash(terraform plan*)",
+      "Bash(docker build *)",
+      "Bash(docker compose *)",
+      "Bash(hadolint *)",
+      "Bash(trivy *)",
+      "Bash(sqlfluff *)",
+      "Bash(actionlint *)",
+      "Bash(git status*)",
+      "Bash(git diff*)",
+      "Bash(git log*)",
+      "Bash(git branch*)",
+      "Bash(git checkout *)",
+      "Bash(git add *)",
+      "Bash(git commit *)",
+      "Bash(git push origin feat/*)",
+      "Bash(git push origin fix/*)",
+      "Bash(git push origin docs/*)",
+      "Bash(git push origin chore/*)",
+      "Bash(git push origin refactor/*)",
+      "Bash(gh pr view*)",
+      "Bash(gh pr list*)",
+      "Bash(gh pr status*)",
+      "Bash(gh pr diff*)",
+      "Bash(gh pr checks*)",
+      "Bash(gh pr create*)",
+      "Bash(gh label *)",
+      "Bash(bats *)",
+      "Bash(shellcheck *)"
+    ],
+    "deny": [
+      "Bash(rm -rf *)",
+      "Bash(git push * --force)",
+      "Bash(git push origin main*)",
+      "Bash(git push origin master*)",
+      "Bash(git reset --hard*)",
+      "Bash(terraform destroy*)",
+      "Bash(kubectl delete namespace*)",
+      "Bash(DROP TABLE*)",
+      "Bash(DROP DATABASE*)",
+      "Read(.env)",
+      "Read(.env.*)",
+      "Read(*.env)",
+      "Read(*.env.*)",
+      "Read(*.pem)",
+      "Read(*.key)",
+      "Edit(.env)",
+      "Edit(.env.*)",
+      "Edit(*.env)",
+      "Edit(*.env.*)",
+      "Edit(*.pem)",
+      "Edit(*.key)",
+      "Edit(.claude/hooks/**)",
+      "Edit(.claude/settings.json)",
+      "Edit(.claude/settings.local.json)",
+      "Bash(rm -fr *)",
+      "Bash(rm -r -f *)",
+      "Bash(git push -f *)",
+      "Bash(git push * -f)",
+      "Bash(git push * +*)",
+      "Bash(git push * main)",
+      "Bash(git push * master)",
+      "Bash(git push * *:main)",
+      "Bash(git push * *:master)",
+      "Bash(cat .env*)",
+      "Bash(sed * .env*)",
+      "Bash(cp .env*)",
+      "Bash(gh pr merge*--admin*)",
+      "Bash(gh api * -X DELETE*)",
+      "Bash(gh api * --method DELETE*)",
+      "Bash(gh api *rulesets* -X *)",
+      "Bash(gh api *rulesets* --method *)",
+      "Bash(npx -y *)",
+      "Bash(npx --yes *)",
+      "Bash(npx *@latest*)",
+      "Bash(pnpm dlx *)",
+      "Bash(yarn dlx *)",
+      "Bash(bunx *)",
+      "Bash(bun x *)"
+    ]
+  },
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Bash|Edit|Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash \"$CLAUDE_PROJECT_DIR\"/.claude/hooks/pre-tool-use-guard.sh"
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "Edit|Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash \"$CLAUDE_PROJECT_DIR\"/.claude/hooks/auto-format.sh"
+          }
+        ]
+      },
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash \"$CLAUDE_PROJECT_DIR\"/.claude/hooks/test-receipt.sh"
+          }
+        ]
+      }
+    ]
+  },
+  "enableAllProjectMcpServers": false,
+  "env": {
+    "TEST_RECEIPT_REQUIRED": "1"
+  }
+}

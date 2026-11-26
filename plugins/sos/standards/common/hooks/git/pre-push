@@ -1,0 +1,84 @@
+#!/bin/bash
+# ============================================================================
+# git pre-push 훅 — 테스트 영수증 2차 대조 (Claude Code 훅과 무관하게 git 자체가 검사)
+# ============================================================================
+# Claude Code 의 PreToolUse 가드는 `sh -c "git push"` 같은 위임 실행이나 도구 밖 셸에서는 동작하지 않는다.
+# 이 훅은 git 이 push 를 실행하기 직전에 같은 영수증(<git common dir>/claude/receipts.json)을 다시 대조한다.
+#
+# 설치 (apply.sh 가 .githooks/pre-push 로 배치한다 — 활성화는 사람이):
+#   pre-commit 프레임워크의 local 훅으로 건다 (core.hooksPath 를 바꾸면 pre-commit 의 git 훅이 꺼진다).
+#   .pre-commit-config.yaml:
+#     - repo: local
+#       hooks:
+#         - id: test-receipt-pre-push
+#           name: test receipt (pre-push)
+#           entry: .githooks/pre-push
+#           language: script
+#           stages: [pre-push]
+#           always_run: true
+#           pass_filenames: false
+#   그다음 `pre-commit install --hook-type pre-push`.
+#   (pre-commit 없이 git 이 직접 부르게 해도 동작한다 — 그때는 stdin 으로 ref 를 받는다)
+#
+# 입력 (둘 중 하나):
+#   - git 직접 호출: stdin 한 줄 = "<local ref> <local sha> <remote ref> <remote sha>"
+#   - pre-commit 경유: stdin 이 없고 환경변수로 받는다 — PRE_COMMIT_TO_REF(구 이름 PRE_COMMIT_SOURCE) =
+#     보낼 커밋, PRE_COMMIT_LOCAL_BRANCH · PRE_COMMIT_REMOTE_BRANCH = 양쪽 ref.
+#     루트 커밋부터 새로 보내는 push 는 pre-commit 이 TO_REF 를 주지 않으므로 LOCAL_BRANCH 를 풀어 쓴다.
+#     pre-commit 은 여러 ref 를 한 번에 push 해도 삭제가 아닌 첫 ref 하나만 넘긴다 (프레임워크의 한계).
+#
+# 판정:
+#   - 삭제 push(local sha 가 0…0)·태그 push → 통과 (보낼 트리가 없거나 트리가 아니다)
+#   - refs/heads/main · master 로의 push → 차단 (PR 로)
+#   - 그 외 → local sha 의 트리가 영수증에 있어야 통과
+#   - TEST_RECEIPT_REQUIRED=0 (환경변수, 사람이 명시) → 영수증 검사 생략 (main 차단은 유지)
+#   - hooklib.py 또는 python3 가 없으면 차단 (fail-closed)
+# ============================================================================
+set -u
+
+ROOT="$(git rev-parse --show-toplevel 2>/dev/null)" || exit 0
+HOOKLIB="$ROOT/.claude/hooks/hooklib.py"
+COMMON="$(git rev-parse --git-common-dir)"
+[[ "$COMMON" != /* ]] && COMMON="$ROOT/$COMMON"
+RECEIPTS="$COMMON/claude/receipts.json"
+
+fail() { echo "pre-push: $1" >&2; exit 1; }
+
+# ref 줄 공급원 — pre-commit 환경변수가 있으면 그것으로 한 줄을 만들고, 없으면 git 의 stdin
+ref_lines() {
+  local to_ref="${PRE_COMMIT_TO_REF:-${PRE_COMMIT_SOURCE:-}}"
+  local local_ref="${PRE_COMMIT_LOCAL_BRANCH:-}" remote_ref="${PRE_COMMIT_REMOTE_BRANCH:-}"
+  if [[ -n "$to_ref" || -n "$remote_ref" ]]; then
+    [[ -n "$to_ref" ]] || to_ref="$(git rev-parse --verify --quiet "${local_ref}^{commit}")" \
+      || fail "cannot resolve local ref '${local_ref}' from pre-commit environment"
+    [[ -n "$remote_ref" ]] || fail "PRE_COMMIT_REMOTE_BRANCH is not set — cannot tell where this push goes"
+    printf '%s %s %s %s\n' "${local_ref:-$to_ref}" "$to_ref" "$remote_ref" "${PRE_COMMIT_FROM_REF:-${PRE_COMMIT_ORIGIN:-0}}"
+  else
+    cat
+  fi
+}
+
+LINES="$(ref_lines)" || exit 1
+
+BLOCKED=0
+while read -r local_ref local_sha remote_ref _remote_sha; do
+  [[ -z "$local_ref" ]] && continue
+  [[ "$local_sha" =~ ^0+$ ]] && continue                    # 브랜치 삭제
+  case "$remote_ref" in
+    refs/tags/*) continue ;;                                # 태그
+    refs/heads/main|refs/heads/master) fail "direct push to ${remote_ref#refs/heads/} is blocked — open a PR" ;;
+  esac
+
+  [[ "${TEST_RECEIPT_REQUIRED:-1}" == "0" ]] && continue
+
+  command -v python3 >/dev/null 2>&1 || fail "python3 is required to verify the test receipt"
+  [[ -f "$HOOKLIB" ]] || fail "$HOOKLIB not found — run apply.sh --only hooks"
+
+  tree="$(git rev-parse --verify --quiet "${local_sha}^{tree}")" || fail "cannot resolve tree for $local_ref"
+  if ! python3 "$HOOKLIB" receipt-has "$RECEIPTS" "$tree"; then
+    echo "pre-push: no passing test receipt for $local_ref (tree ${tree:0:12}) — run the project's test suite on this exact code, commit, then push" >&2
+    BLOCKED=1
+  fi
+done <<< "$LINES"
+
+exit "$BLOCKED"

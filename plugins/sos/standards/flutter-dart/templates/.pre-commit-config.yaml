@@ -1,0 +1,104 @@
+repos:
+  # ── File hygiene ───────────────────────────────────────────────────────────
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v4.6.0
+    hooks:
+      - id: trailing-whitespace
+      - id: end-of-file-fixer
+      - id: check-yaml
+      - id: check-json
+      - id: check-merge-conflict
+      - id: check-added-large-files
+        args: ["--maxkb=500"]
+      - id: no-commit-to-branch
+        args: ["--branch", "main", "--branch", "master"]
+      - id: detect-private-key
+
+  # ── dart format — code formatting ──────────────────────────────────────────
+  - repo: local
+    hooks:
+      - id: dart-format
+        name: dart format
+        entry: dart format --set-exit-if-changed
+        language: system
+        types: [dart]
+
+  # ── dart analyze — static analysis ─────────────────────────────────────────
+  - repo: local
+    hooks:
+      - id: dart-analyze
+        name: dart analyze
+        entry: dart analyze --fatal-infos --fatal-warnings
+        language: system
+        types: [dart]
+        pass_filenames: false
+
+  # ── function complexity (15) / length (50) — tool/quality_metrics ─────────
+  # dart analyze has no complexity or function-length rule (dart_code_metrics went commercial as DCM).
+  # tool/quality_metrics is a package of its own — its analyzer does not clash with custom_lint's.
+  - repo: local
+    hooks:
+      - id: dart-metrics
+        name: Function complexity (15) / length (50)
+        entry: >
+          bash -c 'dart pub get --directory=tool/quality_metrics >/dev/null &&
+            dart --packages=tool/quality_metrics/.dart_tool/package_config.json tool/quality_metrics/bin/quality_metrics.dart --max-complexity 15 --max-lines 50 "$@"' --
+        language: system
+        files: ^lib/.*\.dart$
+        exclude: "(\\.g\\.dart|\\.freezed\\.dart|\\.gen\\.dart|\\.mocks\\.dart)$"
+
+  # ── flutter test — unit tests + line coverage >= 80% ───────────────────────
+  # Runs on push only (slower, full test suite). `flutter test --coverage` only writes coverage/lcov.info —
+  # tool/quality_metrics/bin/coverage_check.dart fails the hook below 80%.
+  - repo: local
+    hooks:
+      - id: flutter-test
+        name: flutter test
+        entry: >
+          bash -c 'flutter test --coverage &&
+            dart tool/quality_metrics/bin/coverage_check.dart coverage/lcov.info 80'
+        language: system
+        pass_filenames: false
+        stages: [pre-push]
+
+      # 바뀐 줄 80% + 전체가 .coverage-baseline 아래로 떨어지지 않음 — 위 훅이 쓴 리포트를 읽는다(전체 80% 검사와 함께 둔다).
+      # scripts/coverage-gate.sh 는 bootstrap 이 복사한다(uv 또는 pipx · origin/main 필요). 첫 적용: --write-baseline 후 .coverage-baseline 커밋
+      - id: coverage-gate
+        name: Coverage gate (changed lines 80% + ratchet)
+        entry: scripts/coverage-gate.sh coverage/lcov.info
+        language: system
+        pass_filenames: false
+        stages: [pre-push]
+
+  # ── detect-secrets — secret detection ──────────────────────────────────────
+  - repo: https://github.com/Yelp/detect-secrets
+    rev: v1.5.0
+    hooks:
+      - id: detect-secrets
+        args: ["--baseline", ".secrets.baseline"]
+
+  # ── file size limit (800 lines) ────────────────────────────────────────────
+  - repo: local
+    hooks:
+      - id: file-size-limit
+        name: File size limit (800 lines)
+        entry: >
+          bash -c 'f=0; for x in "$@"; do
+            l=$(( $(wc -l < "$x") )); if [ "$l" -gt 800 ]; then
+            echo "FAIL: $x ($l lines, max 800)"; f=1; fi; done; exit $f' --
+        language: system
+        files: \.dart$
+        exclude: "(\\.g\\.dart|\\.freezed\\.dart|\\.gen\\.dart|\\.mocks\\.dart)$"
+
+  # ── 테스트 영수증 대조 (push 시) ──────────────────────────────────────────
+  # apply.sh --only hooks 가 배치한 .githooks/pre-push 를 pre-commit 이 실행한다 (git 훅 경로 설정 불필요)
+  # 설치: pre-commit install --hook-type pre-commit --hook-type pre-push
+  - repo: local
+    hooks:
+      - id: test-receipt-pre-push
+        name: test receipt (pre-push)
+        entry: .githooks/pre-push
+        language: script
+        stages: [pre-push]
+        always_run: true
+        pass_filenames: false

@@ -1,0 +1,12 @@
+# Documentation examples flagged by the generic-api-key rule. Allow only these exact strings.
+[extend]
+useDefault = true
+
+[[allowlists]]
+description = "docs: example values, not secrets"
+regexTarget = "line"
+regexes = [
+  '''bcrypt/argon2 with salt''',
+  '''"access_token": "eyJhbGciOiJSUzI1NiIs\.\.\."''',
+  '''API_KEY = "sk-proj-abc123xyz789"  # NEVER''',
+]

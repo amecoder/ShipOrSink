@@ -1,0 +1,105 @@
+repos:
+  # ── File hygiene ───────────────────────────────────────────────────────────
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v4.6.0
+    hooks:
+      - id: trailing-whitespace
+      - id: end-of-file-fixer
+      - id: check-yaml
+      - id: check-json
+      - id: check-merge-conflict
+      - id: check-added-large-files
+        args: ["--maxkb=500"]
+      - id: no-commit-to-branch
+        args: ["--branch", "main", "--branch", "master"]
+      - id: detect-private-key
+
+  # ── gofumpt — strict Go formatting ────────────────────────────────────────
+  - repo: https://github.com/Bahjat/pre-commit-golang
+    rev: v1.0.3
+    hooks:
+      - id: gofumpt
+
+  # ── golangci-lint (fast) — commit 시: --fast-only 린터만 (gocyclo·funlen·nestif·dupl·ineffassign·misspell·copyloopvar)
+  #    errcheck·govet·staticcheck·gosec·revive 는 full 단계에서 돈다. 훅 빌드에 Go 1.26+ 필요 (golangci-lint v2.15 go.mod)
+  - repo: https://github.com/golangci/golangci-lint
+    rev: v2.15.0
+    hooks:
+      - id: golangci-lint
+        name: golangci-lint (fast)
+        args: ["--config=.golangci.yml", "--fast-only"]
+
+  # ── golangci-lint (full) — push 시: 전체 린터 (Tier 1~4, ~8초) ──────────
+  - repo: https://github.com/golangci/golangci-lint
+    rev: v2.15.0
+    hooks:
+      - id: golangci-lint-full
+        name: golangci-lint (full)
+        args: ["--config=.golangci.yml", "--fix=false"]   # hook entry is `run --fix`; never rewrite already-committed files
+        stages: [pre-push]
+
+  # ── go mod tidy — dependency hygiene ──────────────────────────────────────
+  - repo: local
+    hooks:
+      - id: go-mod-tidy
+        name: go mod tidy
+        entry: go mod tidy
+        language: system
+        pass_filenames: false
+        files: \.go$|go\.mod$|go\.sum$
+
+  # ── gosec — security scanning ─────────────────────────────────────────────
+  # Runs as push-only hook (slower, thorough)
+  - repo: local
+    hooks:
+      - id: gosec
+        name: gosec security scan
+        entry: gosec -quiet ./...
+        language: system
+        types: [go]
+        pass_filenames: false
+        stages: [pre-push]
+
+  # ── govulncheck — known CVE scanning ──────────────────────────────────────
+  - repo: local
+    hooks:
+      - id: govulncheck
+        name: govulncheck
+        entry: govulncheck ./...
+        language: system
+        pass_filenames: false
+        stages: [pre-push]
+
+  # ── detect-secrets — secret detection ─────────────────────────────────────
+  - repo: https://github.com/Yelp/detect-secrets
+    rev: v1.5.0
+    hooks:
+      - id: detect-secrets
+        args: ["--baseline", ".secrets.baseline"]
+
+  # ── file size limit ───────────────────────────────────────────────────────
+  # Go files: 800 lines max (consistent with dev-standards policy)
+  - repo: local
+    hooks:
+      - id: file-size-limit
+        name: File size limit (800 lines)
+        entry: >
+          bash -c 'f=0; for x in "$@"; do
+            l=$(( $(wc -l < "$x") )); if [ "$l" -gt 800 ]; then
+            echo "FAIL: $x ($l lines, max 800)"; f=1; fi; done; exit $f' --
+        language: system
+        files: \.go$
+        exclude: "_test\\.go$"
+
+  # ── 테스트 영수증 대조 (push 시) ──────────────────────────────────────────
+  # apply.sh --only hooks 가 배치한 .githooks/pre-push 를 pre-commit 이 실행한다 (git 훅 경로 설정 불필요)
+  # 설치: pre-commit install --hook-type pre-commit --hook-type pre-push
+  - repo: local
+    hooks:
+      - id: test-receipt-pre-push
+        name: test receipt (pre-push)
+        entry: .githooks/pre-push
+        language: script
+        stages: [pre-push]
+        always_run: true
+        pass_filenames: false

@@ -1,0 +1,69 @@
+# clippy.toml — Clippy lint configuration
+# Reference: https://doc.rust-lang.org/clippy/lint_configuration.html
+
+# Minimum Supported Rust Version
+msrv = "1.85.0"   # edition 2024 (rustfmt.toml) requires Rust 1.85+
+
+# Cognitive complexity threshold (clippy::cognitive_complexity)
+cognitive-complexity-threshold = 15
+
+# Maximum number of function arguments (clippy::too_many_arguments)
+too-many-arguments-threshold = 7
+
+# Type complexity threshold (clippy::type_complexity)
+type-complexity-threshold = 250
+
+# Maximum number of single-char binding names (clippy::many_single_char_names)
+single-char-binding-names-threshold = 4
+
+# Maximum lines in a function body (clippy::too_many_lines)
+too-many-lines-threshold = 100
+
+# Maximum number of enum variants (clippy::large_enum_variant)
+enum-variant-size-threshold = 200
+
+# Disallowed macros — prevent debug artifacts in production
+disallowed-macros = [
+    { path = "std::dbg", reason = "Use tracing or log crate instead" },
+    { path = "std::todo", reason = "Complete implementation before merging" },
+    { path = "std::unimplemented", reason = "Provide a proper implementation or return an error" },
+]
+
+# Disallowed methods — enforce safe patterns
+disallowed-methods = [
+    { path = "std::env::set_var", reason = "Not thread-safe; use a config struct instead" },
+    { path = "std::env::remove_var", reason = "Not thread-safe; use a config struct instead" },
+]
+
+# Disallowed types — prevent footguns
+disallowed-types = [
+    { path = "std::collections::HashMap", reason = "Use indexmap::IndexMap or specify a hasher explicitly for deterministic behavior" },
+]
+
+# Allow certain doc markdown styles
+doc-valid-idents = [
+    "GitHub",
+    "GitLab",
+    "JavaScript",
+    "TypeScript",
+    "PostgreSQL",
+    "MySQL",
+    "MongoDB",
+    "Redis",
+    "gRPC",
+    "GraphQL",
+    "OAuth",
+    "OpenAPI",
+    "WebSocket",
+    "macOS",
+    "iOS",
+    "REST",
+    "URL",
+    "HTTP",
+    "HTTPS",
+    "JSON",
+    "YAML",
+    "TOML",
+    "ASCII",
+    "UTF-8",
+]

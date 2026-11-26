@@ -1,0 +1,178 @@
+# ============================================================================
+# Kotlin / Spring Boot CI 워크플로우 템플릿
+# ============================================================================
+# 사용법: 이 파일을 프로젝트의 .github/workflows/ 에 복사하세요.
+#   cp ci-kotlin.yml <your-project>/.github/workflows/ci.yml
+#
+# 필수 조건:
+#   - build.gradle.kts (quality.gradle.kts apply 포함)
+#   - detekt.yml (정적 분석 설정)
+#   - JaCoCo 플러그인 설정 (quality.gradle.kts에 포함)
+#   - owasp-suppressions.xml (OWASP 거짓 양성 억제)
+# ============================================================================
+
+name: Kotlin CI
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main]
+
+# 동일 브랜치/PR에서 중복 실행 방지
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+# 최소 권한 원칙
+permissions:
+  contents: read
+
+env:
+  # renovate: datasource=java-version depName=java-jdk versioning=semver-partial
+  JAVA_VERSION: "25"
+  JAVA_DISTRIBUTION: "temurin"
+  # JaCoCo 커버리지 최소 기준 (build.gradle.kts에서도 설정)
+  COVERAGE_THRESHOLD: 80
+
+jobs:
+  # ──────────────────────────────────────────────────────────────────────────
+  # 린트 + 포맷 검사
+  # ──────────────────────────────────────────────────────────────────────────
+  lint:
+    name: ktlint & detekt
+    runs-on: ubuntu-latest
+    steps:
+      # 소스 코드 체크아웃
+      - name: Checkout
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          persist-credentials: false
+      - name: Setup JDK
+        uses: actions/setup-java@cf277c60eb25467037889841efdb72551f06f6c3 # v4.9.1
+        with:
+          java-version: ${{ env.JAVA_VERSION }}
+          distribution: ${{ env.JAVA_DISTRIBUTION }}
+
+      # Gradle 빌드 캐시 — 반복 빌드 속도 향상
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@748248ddd2a24f49513d8f472f81c3a07d4d50e1 # v4.4.4
+      - name: ktlint check
+        run: ./gradlew ktlintCheck
+
+      # detekt 정적 분석 — 코드 복잡도, 네이밍, 잠재적 버그 검출
+      - name: detekt check
+        run: ./gradlew detektMain detektTest   # detekt 2.0 type-resolution tasks (plain `detekt` skips rules needing types)
+
+  # ──────────────────────────────────────────────────────────────────────────
+  # 테스트 + 커버리지
+  # ──────────────────────────────────────────────────────────────────────────
+  test:
+    name: Test & Coverage (JaCoCo)
+    runs-on: ubuntu-latest
+    steps:
+      # 소스 코드 체크아웃
+      - name: Checkout
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          persist-credentials: false
+      - name: Setup JDK
+        uses: actions/setup-java@cf277c60eb25467037889841efdb72551f06f6c3 # v4.9.1
+        with:
+          java-version: ${{ env.JAVA_VERSION }}
+          distribution: ${{ env.JAVA_DISTRIBUTION }}
+
+      # Gradle 빌드 캐시
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@748248ddd2a24f49513d8f472f81c3a07d4d50e1 # v4.4.4
+      - name: Run tests
+        run: ./gradlew test
+
+      # JaCoCo 커버리지 검증 — 80% 미만 시 빌드 실패
+      - name: Verify coverage threshold
+        run: ./gradlew jacocoTestCoverageVerification
+
+      # JaCoCo HTML/XML 리포트 생성
+      - name: Generate coverage report
+        if: always()
+        run: ./gradlew jacocoTestReport
+
+      # 테스트 리포트를 아티팩트로 업로드
+      - name: Upload test report
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: test-report
+          path: build/reports/tests/test/
+          retention-days: 7
+
+      # JaCoCo 커버리지 리포트를 아티팩트로 업로드
+      - name: Upload coverage report
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: coverage-report
+          path: build/reports/jacoco/test/
+          retention-days: 7
+
+  # ──────────────────────────────────────────────────────────────────────────
+  # 보안 — OWASP 의존성 취약점 검사
+  # ──────────────────────────────────────────────────────────────────────────
+  security:
+    name: OWASP Dependency Check
+    runs-on: ubuntu-latest
+    steps:
+      # 소스 코드 체크아웃
+      - name: Checkout
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          persist-credentials: false
+      - name: Setup JDK
+        uses: actions/setup-java@cf277c60eb25467037889841efdb72551f06f6c3 # v4.9.1
+        with:
+          java-version: ${{ env.JAVA_VERSION }}
+          distribution: ${{ env.JAVA_DISTRIBUTION }}
+
+      # Gradle 빌드 캐시
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@748248ddd2a24f49513d8f472f81c3a07d4d50e1 # v4.4.4
+      # owasp-suppressions.xml로 거짓 양성 관리
+      - name: Run OWASP dependency check
+        run: ./gradlew dependencyCheckAnalyze
+        env:
+          # NVD API 키 (선택 — 없으면 속도가 느림)
+          NVD_API_KEY: ${{ secrets.NVD_API_KEY }}
+
+      # OWASP 리포트를 아티팩트로 업로드
+      - name: Upload OWASP report
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: owasp-report
+          path: build/reports/dependency-check-report.html
+          retention-days: 14
+
+  # ──────────────────────────────────────────────────────────────────────────
+  # 빌드 검증
+  # ──────────────────────────────────────────────────────────────────────────
+  build:
+    name: Build Verify
+    runs-on: ubuntu-latest
+    needs: [lint, test]
+    steps:
+      # 소스 코드 체크아웃
+      - name: Checkout
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          persist-credentials: false
+      - name: Setup JDK
+        uses: actions/setup-java@cf277c60eb25467037889841efdb72551f06f6c3 # v4.9.1
+        with:
+          java-version: ${{ env.JAVA_VERSION }}
+          distribution: ${{ env.JAVA_DISTRIBUTION }}
+
+      # Gradle 빌드 캐시
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@748248ddd2a24f49513d8f472f81c3a07d4d50e1 # v4.4.4
+      - name: Build (skip tests)
+        run: ./gradlew build -x test -x detekt -x ktlintCheck

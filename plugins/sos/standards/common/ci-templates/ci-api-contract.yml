@@ -1,0 +1,145 @@
+# ============================================================================
+# API 계약 깨짐 검사 워크플로우 템플릿 (oasdiff · buf breaking)
+# full 레벨(11~30명 팀) 이상 권장 — apply.sh 는 이 파일을 복사하지 않는다, 아래처럼 직접 복사한다
+# ============================================================================
+# 사용법: 이 파일을 프로젝트의 .github/workflows/ 에 복사하세요.
+#   cp ci-api-contract.yml <your-project>/.github/workflows/api-contract.yml
+#
+# PR 의 API 계약을 기준 브랜치(PR 의 base)의 같은 파일과 비교해, 기존 클라이언트를 깨뜨리는 변경이면 실패한다.
+#   OpenAPI  — oasdiff breaking --fail-on ERR (예: 응답의 필수 필드 삭제 · 필수 요청 필드 추가 · 경로 삭제)
+#              응답의 선택 필드 삭제와 deprecated 로 표시해 둔 필드 삭제는 oasdiff 가 깨짐으로 보지 않는다
+#   Protobuf — buf breaking, 규칙은 PROTO_DIR/buf.yaml 의 breaking.use (없으면 FILE)
+#
+# 필수 조건:
+#   - OPENAPI_SPECS 에 스펙 경로(저장소 루트 기준, 공백으로 여러 개)를, PROTO_DIR 에 buf 모듈 폴더를 적는다.
+#     경로에 공백·글롭(* ? [)은 쓸 수 없다 — 글롭은 PR 트리에서만 펼쳐져 지워진 스펙을 놓치므로 거부한다
+#   - PROTO_DIR 에 buf.yaml 이 있거나, 저장소 루트 buf.yaml 이 v2 workspace(modules)로 그 폴더를 가리켜야 한다.
+#     buf 모듈이 여러 개면 protobuf 잡을 모듈마다 복사한다(PROTO_DIR 는 하나)
+#   - 쓰지 않는 쪽 잡(openapi 또는 protobuf)은 통째로 지운다 — 경로가 지금 트리에 없으면 그 잡은 실패한다
+#     (경로 오타로 검사가 조용히 꺼지지 않게)
+#   - 기준 브랜치에 아직 없는 스펙(처음 추가하는 PR)은 비교할 대상이 없어 알림만 남기고 통과한다.
+#     스펙 파일 이름을 바꾸거나 OPENAPI_SPECS·PROTO_DIR 값을 바꾸는 PR 도 "새 스펙"으로 보이므로 리뷰에서 직접 확인한다
+#   - PR 에서 스펙 파일을 지우면 실패한다(공개된 API 삭제는 깨짐이다)
+#   - 의도한 깨짐(메이저 버전 올림 등)은 이 검사를 끄지 말고 새 버전 경로·패키지(v2)로 추가한다
+# ============================================================================
+
+name: API Contract
+
+on:
+  pull_request:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+env:
+  # renovate: datasource=github-releases depName=oasdiff/oasdiff extractVersion=^v(?<version>.*)$
+  OASDIFF_VERSION: "1.35.0"
+  # renovate: datasource=github-releases depName=bufbuild/buf extractVersion=^v(?<version>.*)$
+  BUF_VERSION: "1.75.0"
+  OPENAPI_SPECS: "openapi.yaml"
+  PROTO_DIR: "proto"
+
+jobs:
+  # ──────────────────────────────────────────────────────────────────────────
+  # OpenAPI — oasdiff
+  # ──────────────────────────────────────────────────────────────────────────
+  openapi:
+    name: oasdiff breaking
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      # 기준 브랜치의 스펙을 git 에서 읽으므로 전체 이력이 필요하다
+      - name: Checkout (full history)
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+
+      - name: Install oasdiff (release binary, same-release checksum)
+        run: |
+          set -euo pipefail
+          asset="oasdiff_${OASDIFF_VERSION}_linux_amd64.tar.gz"
+          base="https://github.com/oasdiff/oasdiff/releases/download/v${OASDIFF_VERSION}"
+          cd "$RUNNER_TEMP"
+          curl -fsSLo "$asset" "$base/$asset"
+          curl -fsSLo checksums.txt "$base/checksums.txt"
+          expected="$(grep " $asset\$" checksums.txt | awk '{print $1}')"
+          actual="$(sha256sum "$asset" | awk '{print $1}')"
+          test -n "$expected" && test "$expected" = "$actual"
+          mkdir -p bin && tar -xzf "$asset" -C bin oasdiff
+          echo "$RUNNER_TEMP/bin" >> "$GITHUB_PATH"
+
+      - name: Breaking changes (oasdiff)
+        env:
+          BASE_REF: origin/${{ github.base_ref }}
+        run: |
+          set -euo pipefail
+          case "$OPENAPI_SPECS" in
+            *[*?[]*) echo "::error::OPENAPI_SPECS must list explicit paths — globs miss specs deleted in the PR"; exit 1 ;;
+          esac
+          status=0
+          for spec in $OPENAPI_SPECS; do
+            if [ ! -f "$spec" ]; then
+              if git cat-file -e "$BASE_REF:$spec" 2>/dev/null; then
+                echo "::error::OpenAPI spec '$spec' exists at $BASE_REF but was deleted in this PR — removing a published API is a breaking change"
+              else
+                echo "::error::OpenAPI spec '$spec' not found — set OPENAPI_SPECS to your spec paths"
+              fi
+              status=1
+              continue
+            fi
+            if ! git cat-file -e "$BASE_REF:$spec" 2>/dev/null; then
+              echo "::notice::'$spec' does not exist at $BASE_REF (new spec) — nothing to compare"
+              continue
+            fi
+            oasdiff breaking "$BASE_REF:$spec" "$spec" --fail-on ERR || status=1
+          done
+          exit "$status"
+
+  # ──────────────────────────────────────────────────────────────────────────
+  # Protobuf — buf breaking
+  # ──────────────────────────────────────────────────────────────────────────
+  protobuf:
+    name: buf breaking
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout (full history)
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+
+      - name: Install buf (release binary, same-release checksum)
+        run: |
+          set -euo pipefail
+          asset="buf-Linux-x86_64"
+          base="https://github.com/bufbuild/buf/releases/download/v${BUF_VERSION}"
+          cd "$RUNNER_TEMP"
+          curl -fsSLo "$asset" "$base/$asset"
+          curl -fsSLo sha256.txt "$base/sha256.txt"
+          expected="$(grep " $asset\$" sha256.txt | awk '{print $1}')"
+          actual="$(sha256sum "$asset" | awk '{print $1}')"
+          test -n "$expected" && test "$expected" = "$actual"
+          mkdir -p bin && install -m 755 "$asset" bin/buf
+          echo "$RUNNER_TEMP/bin" >> "$GITHUB_PATH"
+
+      - name: Breaking changes (buf)
+        env:
+          BASE_REF: origin/${{ github.base_ref }}
+        run: |
+          set -euo pipefail
+          if ! find "$PROTO_DIR" -name '*.proto' -print -quit 2>/dev/null | grep -q .; then
+            echo "::error::no .proto files under PROTO_DIR '$PROTO_DIR' — set PROTO_DIR to your buf module"
+            exit 1
+          fi
+          if ! git ls-tree -r --name-only "$BASE_REF" -- "$PROTO_DIR" | grep -q '\.proto$'; then
+            echo "::notice::'$PROTO_DIR' has no .proto files at $BASE_REF (new module) — nothing to compare"
+            exit 0
+          fi
+          base_sha="$(git rev-parse "$BASE_REF")"
+          buf breaking "$PROTO_DIR" --against ".git#ref=${base_sha},subdir=${PROTO_DIR}"

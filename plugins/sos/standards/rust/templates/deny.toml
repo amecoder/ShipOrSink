@@ -1,0 +1,73 @@
+# deny.toml — cargo-deny configuration
+# Reference: https://embarkstudios.github.io/cargo-deny/
+#
+# Run: cargo deny check
+# Individual: cargo deny check advisories | licenses | bans | sources
+
+# ── Advisories — vulnerability scanning ───────────────────────────────────────
+[advisories]
+# Vulnerable crates are always denied (cargo-deny >= 0.16; the old `vulnerability` key was removed)
+# Unmaintained crates anywhere in the graph FAIL the check (cargo-deny has no warn level here).
+# If one is justified, add its RUSTSEC ID with a reason to `ignore`; use "workspace" to check direct deps only.
+unmaintained = "all"
+# Warn on yanked crates
+yanked = "warn"
+# Ignore specific advisories (add RUSTSEC IDs here when justified)
+ignore = []
+
+# ── Licenses — allowed license list ──────────────────────────────────────────
+[licenses]
+# Crates without a license, and any license not in `allow` (e.g. GPL/AGPL), are denied by default.
+# (`unlicensed`/`copyleft` keys were removed in cargo-deny 0.16)
+# Allow permissive licenses only
+allow = [
+    "MIT",
+    "Apache-2.0",
+    "Apache-2.0 WITH LLVM-exception",
+    "BSD-2-Clause",
+    "BSD-3-Clause",
+    "ISC",
+    "Zlib",
+    "0BSD",
+    "Unicode-3.0",
+    "Unicode-DFS-2016",
+    "BSL-1.0",
+    "CC0-1.0",
+    "MPL-2.0",
+]
+# Confidence threshold for license detection
+confidence-threshold = 0.8
+
+# Exceptions for specific crates (e.g., ring uses custom license)
+# [[licenses.exceptions]]
+# name = "ring"
+# allow = ["OpenSSL"]
+
+# ── Bans — dependency restrictions ───────────────────────────────────────────
+[bans]
+# Warn when multiple versions of the same crate exist
+multiple-versions = "warn"
+# Deny wildcard dependencies (e.g., version = "*")
+wildcards = "deny"
+# Highlight all duplicated crates in the dependency tree
+highlight = "all"
+# Allow specific duplicate crates (common transitive deps)
+# [[bans.skip]]
+# name = "windows-sys"
+# version = "*"
+
+# Deny specific crates
+# [[bans.deny]]
+# name = "openssl"
+# wrappers = ["native-tls"]  # allow only through native-tls
+
+# ── Sources — registry and git restrictions ──────────────────────────────────
+[sources]
+# Deny crates from unknown registries
+unknown-registry = "deny"
+# Deny crates from unknown git repositories
+unknown-git = "deny"
+# Only allow crates.io
+allow-registry = ["https://github.com/rust-lang/crates.io-index"]
+# No git dependencies allowed by default (add exceptions below)
+allow-git = []

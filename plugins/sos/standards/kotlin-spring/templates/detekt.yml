@@ -1,0 +1,584 @@
+# ──────────────────────────────────────────────────────────────────────────────
+# detekt.yml — Kotlin 정적 분석 설정 (빅테크 기준)
+# 참고: https://detekt.dev/docs/rules/
+# ──────────────────────────────────────────────────────────────────────────────
+
+# detekt 2.0: `build.maxIssues` 가 없어졌다 — 심각도 error 인 위반이 1건이라도 있으면 실패한다
+# (Gradle 기본 failOnSeverity = Error · CLI 기본 --fail-on-severity error). 규칙 기본 심각도는 error.
+
+config:
+  validation: true
+  warningsAsErrors: false
+  checkExhaustiveness: false
+
+processors:
+  active: true
+  exclude:
+    - DetektProgressListener
+
+console-reports:
+  active: true
+  exclude:
+    - NotificationReport
+
+# ── 복잡도 (Python McCabe ≤ 15 대응) ──────────────────────────────────────────
+complexity:
+  active: true
+
+  CyclomaticComplexMethod:
+    active: true
+    allowedComplexity: 15   # 정본 복잡도 15 — detekt 2.0 은 allowedComplexity 를 넘으면 보고한다 (15 까지 통과)
+    ignoreSingleWhenExpression: false
+    ignoreSimpleWhenEntries: true
+    ignoreNestingFunctions: false
+
+  LongMethod:
+    active: true
+    allowedLines: 50        # 정본 함수 50줄 — 넘으면 보고 · { 줄~} 줄, 빈 줄·주석 제외
+    ignoreAnnotated: []
+
+  LongParameterList:
+    active: true
+    allowedFunctionParameters: 5     # Python PLR0913(>5) 와 동일 수준
+    allowedConstructorParameters: 6
+    ignoreDefaultParameters: false
+    ignoreDataClasses: true
+    ignoreAnnotated: ["Bean", "Autowired"]
+
+  TooManyFunctions:
+    active: true
+    allowedFunctionsPerFile: 29
+    allowedFunctionsPerClass: 19
+    allowedFunctionsPerInterface: 14
+    allowedFunctionsPerObject: 19
+    allowedFunctionsPerEnum: 9
+    ignoreDeprecated: false
+    ignorePrivate: false
+    ignoreOverridden: false
+
+  LargeClass:
+    active: true
+    allowedLines: 600       # 클래스 600줄까지 통과
+
+  ComplexInterface:
+    active: true
+    allowedDefinitions: 9
+    includeStaticDeclarations: false
+    includePrivateDeclarations: false
+
+  NestedBlockDepth:
+    active: true
+    allowedDepth: 3         # 1.x threshold 4(4 이상 보고)와 같은 동작
+
+  ReplaceSafeCallChainWithRun:
+    active: false
+
+  NamedArguments:
+    active: false
+
+# ── 네이밍 규칙 ────────────────────────────────────────────────────────────────
+naming:
+  active: true
+
+  ClassNaming:
+    active: true
+    classPattern: '[A-Z][a-zA-Z0-9]*'
+
+  FunctionNaming:
+    active: true
+    functionPattern: '([a-z][a-zA-Z0-9]*)|(`.*`)'
+    excludeClassPattern: '$^'
+    ignoreAnnotated: ["Test", "ParameterizedTest", "BeforeEach", "AfterEach", "BeforeAll", "AfterAll"]
+
+  VariableNaming:
+    active: true
+    variablePattern: '[a-z][A-Za-z0-9]*'
+    privateVariablePattern: '(_)?[a-z][A-Za-z0-9]*'
+    excludeClassPattern: '$^'
+
+  # 1.23 은 옛 ConstantNaming 을 최상위 / object·companion 두 규칙으로 나눴다
+  TopLevelPropertyNaming:
+    active: true
+    constantPattern: '[A-Z][_A-Z0-9]*'
+
+  ObjectPropertyNaming:
+    active: true
+    constantPattern: '[A-Z][_A-Z0-9]*'
+
+  PackageNaming:
+    active: true
+    packagePattern: '[a-z]+(\.[a-z][A-Za-z0-9]*)*'
+
+  MatchingDeclarationName:
+    active: true
+    mustBeFirst: true
+
+  MemberNameEqualsClassName:
+    active: true
+    ignoreOverridden: true
+
+  BooleanPropertyNaming:
+    active: true
+    allowedPattern: '^(is|has|are|was|should|can|will)[A-Z].*'
+
+# ── 스타일 ────────────────────────────────────────────────────────────────────
+style:
+  active: true
+
+  MagicNumber:
+    active: true
+    ignoreNumbers: ["-1", "0", "1", "2", "100", "1000"]
+    ignoreHashCodeFunction: true
+    ignorePropertyDeclaration: false
+    ignoreLocalVariableDeclaration: false
+    ignoreConstantDeclaration: true
+    ignoreCompanionObjectPropertyDeclaration: true
+    ignoreAnnotation: false
+    ignoreNamedArgument: true
+    ignoreEnums: true
+    ignoreRanges: false
+    ignoreExtensionFunctions: true
+
+  MaxLineLength:
+    active: true
+    maxLineLength: 120       # ktlint 기본값과 일치
+    excludePackageStatements: true
+    excludeImportStatements: true
+    excludeCommentStatements: false
+    excludeRawStrings: true
+
+  WildcardImport:
+    active: true
+    excludeImports: ["java.util.*", "kotlinx.android.synthetic.*", "kotlin.reflect.KClass"]
+
+  ForbiddenImport:
+    active: false
+
+  UnusedImport:
+    active: false  # ktlint / IDEA에서 처리
+
+  ReturnCount:
+    active: true
+    max: 5
+    excludedFunctions: ["equals"]
+    excludeGuardClauses: true
+    excludeReturnFromLambda: true
+
+  ThrowsCount:
+    active: true
+    max: 2
+    excludeGuardClauses: false
+
+  FunctionOnlyReturningConstant:
+    active: true
+    ignoreOverridableFunction: true
+    ignoreActualFunction: true
+    excludedFunctions: []
+
+  LoopWithTooManyJumpStatements:
+    active: true
+    maxJumpCount: 1
+
+  NewLineAtEndOfFile:
+    active: true
+
+  NoTabs:
+    active: false   # .editorconfig 에서 처리
+
+  OptionalAbstractKeyword:
+    active: true
+
+  OptionalUnit:
+    active: false
+
+  RedundantVisibilityModifier:
+    active: false
+
+  SpacingAfterPackageAndImports:
+    active: true
+
+  TrailingWhitespace:
+    active: false   # pre-commit hooks 에서 처리
+
+  UnderscoresInNumericLiterals:
+    active: true
+    acceptableLength: 5
+    allowNonStandardGrouping: false
+
+  UseCheckNotNull:
+    active: true
+
+  UseRequire:
+    active: true
+
+  UseRequireNotNull:
+    active: true
+
+  VarCouldBeVal:
+    active: true
+    ignoreLateinitVar: false
+
+  AbstractClassCanBeConcreteClass:   # 2.0 에서 UnnecessaryAbstractClass 가 둘로 나뉨
+    active: true
+
+  AbstractClassCanBeInterface:
+    active: true
+
+  EqualsNullCall:
+    active: true
+
+  ExplicitItLambdaParameter:
+    active: true
+
+  ExpressionBodySyntax:
+    active: false
+
+  ForbiddenComment:
+    active: true
+    comments:
+      - reason: "FIXME 코멘트는 이슈 트래커 등록 후 제거하세요"
+        value: "FIXME:"
+      - reason: "HACK 코멘트는 기술 부채 이슈로 등록하세요"
+        value: "HACK:"
+    allowedPatterns: ""
+
+  ForbiddenMethodCall:
+    active: false
+
+  MandatoryBracesLoops:
+    active: false
+
+  StringShouldBeRawString:
+    active: true
+    maxEscapedCharacterCount: 2
+
+# ── 성능 ──────────────────────────────────────────────────────────────────────
+performance:
+  active: true
+
+  ArrayPrimitive:
+    active: true
+
+  CouldBeSequence:
+    active: true
+    allowedOperations: 2
+
+  ForEachOnRange:
+    active: true
+
+  SpreadOperator:
+    active: true
+
+  UnnecessaryPartOfBinaryExpression:
+    active: true
+
+  UnnecessaryTemporaryInstantiation:
+    active: true
+
+# ── 잠재적 버그 ───────────────────────────────────────────────────────────────
+potential-bugs:
+  active: true
+
+  AvoidReferentialEquality:
+    active: true
+    forbiddenTypePatterns:
+      - "kotlin.String"
+
+  CastToNullableType:
+    active: true
+
+  Deprecation:
+    active: false
+
+  DontDowncastCollectionTypes:
+    active: true
+
+  DoubleMutabilityForCollection:
+    active: true
+    mutableTypes:
+      - "kotlin.collections.MutableList"
+      - "kotlin.collections.MutableMap"
+      - "kotlin.collections.MutableSet"
+      - "java.util.ArrayList"
+      - "java.util.LinkedHashSet"
+      - "java.util.LinkedHashMap"
+
+  ElseCaseInsteadOfExhaustiveWhen:
+    active: true
+
+  EqualsAlwaysReturnsTrueOrFalse:
+    active: true
+
+  EqualsWithHashCodeExist:
+    active: true
+
+  ExitOutsideMain:
+    active: true
+
+  ExplicitGarbageCollectionCall:
+    active: true
+
+  HasPlatformType:
+    active: true
+
+  IgnoredReturnValue:
+    active: true
+
+  ImplicitDefaultLocale:
+    active: true
+
+  ImplicitUnitReturnType:
+    active: true
+    allowExplicitReturnType: true
+
+  InvalidRange:
+    active: true
+
+  IteratorHasNextCallsNextMethod:
+    active: true
+
+  IteratorNotThrowingNoSuchElementException:
+    active: true
+
+  LateinitUsage:
+    active: false   # Spring DI에서 lateinit var 사용 허용
+
+  MapGetWithNotNullAssertionOperator:
+    active: true
+
+  MissingPackageDeclaration:
+    active: false
+
+  NullCheckOnMutableProperty:
+    active: true
+
+  NullableToStringCall:
+    active: true
+
+  UnconditionalJumpStatementInLoop:
+    active: true
+
+  UnnecessaryNotNullCheck:
+    active: true
+
+  UnnecessaryNotNullOperator:
+    active: true
+
+  UnnecessarySafeCall:
+    active: true
+
+  UnreachableCatchBlock:
+    active: true
+
+  UnreachableCode:
+    active: true
+
+  UnsafeCallOnNullableType:
+    active: true
+    excludes: ["**/test/**", "**/*Test.kt", "**/*Spec.kt"]
+
+  UnsafeCast:
+    active: true
+    excludes: ["**/test/**", "**/*Test.kt"]
+
+  UnusedUnaryOperator:
+    active: true
+
+  UselessPostfixExpression:
+    active: true
+
+  WrongEqualsTypeParameter:
+    active: true
+
+# ── 예외 처리 ─────────────────────────────────────────────────────────────────
+exceptions:
+  active: true
+
+  ExceptionRaisedInUnexpectedLocation:
+    active: true
+    methodNames:
+      - "toString"
+      - "hashCode"
+      - "equals"
+      - "finalize"
+
+  InstanceOfCheckForException:
+    active: true
+
+  NotImplementedDeclaration:
+    active: false
+
+  ObjectExtendsThrowable:
+    active: true
+
+  PrintStackTrace:
+    active: true
+
+  RethrowCaughtException:
+    active: true
+
+  ReturnFromFinally:
+    active: true
+    ignoreLabeled: false
+
+  SwallowedException:
+    active: true
+    ignoredExceptionTypes:
+      - "InterruptedException"
+      - "MalformedURLException"
+      - "NumberFormatException"
+      - "ParseException"
+    allowedExceptionNameRegex: "_|(ignore|ignored)"
+
+  ThrowingExceptionFromFinally:
+    active: true
+
+  ThrowingExceptionInMain:
+    active: false
+
+  ThrowingExceptionsWithoutMessageOrCause:
+    active: true
+    exceptions:
+      - "ArrayIndexOutOfBoundsException"
+      - "Error"
+      - "Exception"
+      - "IllegalArgumentException"
+      - "IllegalMonitorStateException"
+      - "IllegalStateException"
+      - "IndexOutOfBoundsException"
+      - "NullPointerException"
+      - "RuntimeException"
+      - "Throwable"
+
+  ThrowingNewInstanceOfSameException:
+    active: true
+
+  TooGenericExceptionCaught:
+    active: true
+    exceptionNames:
+      - "ArrayIndexOutOfBoundsException"
+      - "Error"
+      - "Exception"
+      - "RuntimeException"
+      - "Throwable"
+    allowedExceptionNameRegex: "_|(ignore|ignored)"
+    excludes: ["**/test/**", "**/*Test.kt"]
+
+  TooGenericExceptionThrown:
+    active: true
+    exceptionNames:
+      - "Error"
+      - "Exception"
+      - "RuntimeException"
+      - "Throwable"
+
+# ── 코루틴 ───────────────────────────────────────────────────────────────────
+coroutines:
+  active: true
+
+  GlobalCoroutineUsage:
+    active: true
+
+  InjectDispatcher:
+    active: true
+    dispatcherNames:
+      - "IO"
+      - "Default"
+      - "Unconfined"
+
+  RedundantSuspendModifier:
+    active: true
+
+  SleepInsteadOfDelay:
+    active: true
+
+  SuspendFunSwallowedCancellation:
+    active: false
+
+  SuspendFunWithCoroutineScopeReceiver:
+    active: false
+
+  SuspendFunWithFlowReturnType:
+    active: true
+
+# ── 주석 ─────────────────────────────────────────────────────────────────────
+comments:
+  active: true
+
+  AbsentOrWrongFileLicense:
+    active: false
+
+  DocumentationOverPrivateFunction:
+    active: false
+
+  DocumentationOverPrivateProperty:
+    active: false
+
+  EndOfSentenceFormat:
+    active: false
+
+  KDocReferencesNonPublicProperty:
+    active: false
+
+  OutdatedDocumentation:
+    active: false
+
+  UndocumentedPublicClass:
+    active: false    # 선택사항: true로 바꾸면 모든 public 클래스에 KDoc 필수
+
+  UndocumentedPublicFunction:
+    active: false    # 선택사항: true로 바꾸면 모든 public 함수에 KDoc 필수
+
+  UndocumentedPublicProperty:
+    active: false
+
+# ── 빈 블록 ───────────────────────────────────────────────────────────────────
+empty-blocks:
+  active: true
+
+  EmptyCatchBlock:
+    active: true
+    allowedExceptionNameRegex: "_|(ignore|ignored)"
+
+  EmptyClassBlock:
+    active: true
+
+  EmptyDefaultConstructor:
+    active: true
+
+  EmptyDoWhileBlock:
+    active: true
+
+  EmptyElseBlock:
+    active: true
+
+  EmptyFinallyBlock:
+    active: true
+
+  EmptyForBlock:
+    active: true
+
+  EmptyFunctionBlock:
+    active: true
+    ignoreOverridden: false
+
+  EmptyIfBlock:
+    active: true
+
+  EmptyInitBlock:
+    active: true
+
+  EmptyKotlinFile:
+    active: true
+
+  EmptySecondaryConstructor:
+    active: true
+
+  EmptyTryBlock:
+    active: true
+
+  EmptyWhenBlock:
+    active: true
+
+  EmptyWhileBlock:
+    active: true

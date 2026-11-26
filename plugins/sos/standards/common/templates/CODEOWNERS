@@ -1,0 +1,72 @@
+# CODEOWNERS 템플릿
+#
+# 이 파일을 프로젝트 루트 또는 .github/ 디렉토리에 복사하여 사용한다.
+# GitHub/GitLab이 PR 생성 시 자동으로 리뷰어를 지정한다.
+#
+# 형식: <pattern> <owner1> <owner2> ...
+# 참고: https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-features/customizing-your-repository/about-code-owners
+#
+# 규칙:
+# - 마지막 매칭 패턴이 우선 적용 (파일 하단 = 높은 우선순위)
+# - 팀 지정 시 @org/team-name 형식 사용
+# - 최소 1명 이상의 CODEOWNER 승인 필수로 Branch Protection에 설정
+
+# ─── 전체 기본 소유자 ─────────────────────────────────────────────────
+# 모든 파일의 기본 리뷰어 (다른 규칙이 없으면 이 팀이 리뷰)
+*                                   @org/engineering
+
+# ─── 백엔드 ──────────────────────────────────────────────────────────
+/src/api/                           @org/backend-team
+/src/domain/                        @org/backend-team
+/src/infrastructure/                @org/backend-team
+*.py                                @org/backend-team
+*.go                                @org/backend-team
+*.kt                                @org/backend-team
+*.java                              @org/backend-team
+
+# ─── 프론트엔드 ──────────────────────────────────────────────────────
+/src/components/                    @org/frontend-team
+/src/pages/                         @org/frontend-team
+/src/app/                           @org/frontend-team
+*.tsx                               @org/frontend-team
+*.css                               @org/frontend-team
+*.scss                              @org/frontend-team
+
+# ─── 인프라 / DevOps ────────────────────────────────────────────────
+/infra/                             @org/platform-team
+/k8s/                               @org/platform-team
+/terraform/                         @org/platform-team
+Dockerfile*                         @org/platform-team
+docker-compose*                     @org/platform-team
+.github/workflows/                  @org/platform-team
+
+# ─── 데이터베이스 ────────────────────────────────────────────────────
+/migrations/                        @org/backend-team @org/dba-team
+*.sql                               @org/dba-team
+
+# ─── 보안 (높은 우선순위) ────────────────────────────────────────────
+# 보안 관련 파일은 보안팀 추가 승인 필수
+/src/auth/                          @org/backend-team @org/security-team
+/src/security/                      @org/security-team
+**/middleware/auth*                  @org/security-team
+
+# ─── 설정 / 품질 (높은 우선순위) ─────────────────────────────────────
+# CI/CD, 린터, 테스트 설정 변경 시 테크 리드 승인
+.github/                            @org/tech-leads
+.claude/                            @org/tech-leads
+eslint.config.*                     @org/tech-leads
+tsconfig*.json                      @org/tech-leads
+pyproject.toml                      @org/tech-leads
+.golangci.yml                       @org/tech-leads
+detekt.yml                          @org/tech-leads
+
+# ─── 문서 ────────────────────────────────────────────────────────────
+/docs/                              @org/tech-leads
+*.md                                @org/engineering
+CHANGELOG.md                        @org/tech-leads
+
+# ─── API 스펙 (가장 높은 우선순위) ───────────────────────────────────
+# API 변경은 반드시 API 리뷰어 승인
+openapi*.yaml                       @org/api-reviewers
+openapi*.json                       @org/api-reviewers
+*.proto                             @org/api-reviewers

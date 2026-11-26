@@ -1,0 +1,93 @@
+repos:
+  # ── 파일 위생 ──────────────────────────────────────────────────────────────
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v4.6.0
+    hooks:
+      - id: trailing-whitespace
+      - id: end-of-file-fixer
+      - id: check-yaml
+      - id: check-toml
+      - id: check-json
+      - id: check-merge-conflict
+      - id: check-added-large-files
+        args: ["--maxkb=1000"]   # Kotlin은 Python보다 파일이 클 수 있음
+      - id: no-commit-to-branch
+        args: ["--branch", "main", "--branch", "master"]
+      - id: detect-private-key
+
+  # ── ktlint — Kotlin 포매터 ─────────────────────────────────────────────────
+  # Gradle daemon 활용으로 두 번째 실행부터 빠름 (~3초)
+  - repo: local
+    hooks:
+      - id: ktlint-format
+        name: ktlint format
+        entry: bash -c 'cd "$(git rev-parse --show-toplevel)" && ./gradlew ktlintFormat --daemon -q'
+        language: system
+        files: \.kts?$
+        pass_filenames: false
+
+      - id: ktlint-check
+        name: ktlint check
+        entry: bash -c 'cd "$(git rev-parse --show-toplevel)" && ./gradlew ktlintCheck --daemon -q'
+        language: system
+        files: \.kts?$
+        pass_filenames: false
+
+  # ── detekt — 정적 분석 ──────────────────────────────────────────────────────
+  # [주의] CI에서도 실행되므로 로컬에서 실패하면 push 불가
+  # 느리면 아래 id를 stages: [push] 로 바꿔 push 시에만 실행
+  - repo: local
+    hooks:
+      - id: detekt
+        name: detekt static analysis
+        entry: bash -c 'cd "$(git rev-parse --show-toplevel)" && ./gradlew detekt --daemon -q'
+        language: system
+        files: \.kt$
+        pass_filenames: false
+        stages: [pre-push]   # detekt는 push 시에만 실행 (커밋은 ktlint만)
+
+  # ── 시크릿 탐지 ────────────────────────────────────────────────────────────
+  - repo: https://github.com/Yelp/detect-secrets
+    rev: v1.5.0
+    hooks:
+      - id: detect-secrets
+        args: ["--baseline", ".secrets.baseline"]
+
+  # ── 파일 크기 제한 ────────────────────────────────────────────────────────
+  # Kotlin 클래스는 600줄 제한 (detekt LargeClass와 동기화)
+  - repo: local
+    hooks:
+      - id: file-size-limit
+        name: File size limit (600 lines)
+        entry: >
+          bash -c 'f=0; for x in "$@"; do
+            l=$(( $(wc -l < "$x") )); if [ "$l" -gt 600 ]; then
+            echo "FAIL: $x ($l lines, max 600)"; f=1; fi; done; exit $f' --
+        language: system
+        files: ^src/main/.*\.kt$
+
+  # ── coverage gate (push) — changed lines 80% + total never below .coverage-baseline ─────
+  # scripts/coverage-gate.sh (copied by bootstrap; needs uv). Report: the Gradle JaCoCo XML report (quality.gradle.kts).
+  # First adoption: run it once with --write-baseline and commit .coverage-baseline.
+  - repo: local
+    hooks:
+      - id: coverage-gate
+        name: Coverage gate (changed lines 80% + ratchet)
+        entry: bash -c './gradlew test jacocoTestReport -q && scripts/coverage-gate.sh build/reports/jacoco/test/jacocoTestReport.xml'
+        language: system
+        pass_filenames: false
+        types: [kotlin]
+        stages: [pre-push]
+
+  # ── 테스트 영수증 대조 (push 시) ──────────────────────────────────────────
+  # apply.sh --only hooks 가 배치한 .githooks/pre-push 를 pre-commit 이 실행한다 (git 훅 경로 설정 불필요)
+  # 설치: pre-commit install --hook-type pre-commit --hook-type pre-push
+  - repo: local
+    hooks:
+      - id: test-receipt-pre-push
+        name: test receipt (pre-push)
+        entry: .githooks/pre-push
+        language: script
+        stages: [pre-push]
+        always_run: true
+        pass_filenames: false

@@ -1,0 +1,73 @@
+# ============================================================================
+# ai-ready 라벨 가드 워크플로우 템플릿 — "사람만 붙인다" 를 강제
+# ============================================================================
+# 사용법: apply.sh --only github 가 .github/workflows/ai-ready-guard.yml 로 배치한다 (scripts/ai-ready-guard.sh 와 한 쌍).
+#
+# 동작: 이슈에 `ai-ready` 라벨이 붙는 순간(issues.labeled) 붙인 주체를 본다.
+#   - 봇 계정(GitHub App, login 이 [bot]) 또는 write 권한 미만 → 라벨을 떼고 이유를 코멘트로 남긴다
+#   - 사람 + write/maintain/admin → 그대로 둔다
+# 판정 로직은 .github/scripts/ai-ready-guard.sh 한 곳 — 로컬에서 bats 로 검증된다.
+#
+# 한계: 저장소 write 권한을 가진 사람 계정으로 에이전트를 돌리면(개인 토큰) 구분할 수 없다.
+#   그 경우 에이전트용 GitHub App 을 따로 만들어 [bot] 계정으로 동작시키는 것이 전제다.
+# ============================================================================
+
+name: ai-ready Guard
+
+on:
+  issues:
+    types: [labeled]
+
+permissions: {}   # grant per job, so a future job does not inherit issues: write
+
+jobs:
+  guard:
+    name: ai-ready-guard
+    permissions:
+      contents: read
+      issues: write
+    if: github.event.label.name == 'ai-ready'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Checkout
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          persist-credentials: false
+
+      - name: Look up the labeler's repository permission
+        id: perm
+        env:
+          GH_TOKEN: ${{ github.token }}
+          SENDER: ${{ github.event.sender.login }}
+        run: |
+          perm="$(gh api "repos/${GITHUB_REPOSITORY}/collaborators/${SENDER}/permission" --jq .permission 2>/dev/null || echo none)"
+          echo "permission=$perm" >> "$GITHUB_OUTPUT"
+
+      - name: Decide
+        id: decide
+        env:
+          LABEL: ${{ github.event.label.name }}
+          SENDER: ${{ github.event.sender.login }}
+          SENDER_TYPE: ${{ github.event.sender.type }}
+          PERMISSION: ${{ steps.perm.outputs.permission }}
+        run: |
+          set +e
+          verdict="$(bash .github/scripts/ai-ready-guard.sh)"
+          rc=$?
+          set -e
+          echo "verdict=$verdict" >> "$GITHUB_OUTPUT"
+          echo "rc=$rc" >> "$GITHUB_OUTPUT"
+          echo "$verdict"
+
+      - name: Remove the label and explain
+        if: steps.decide.outputs.rc != '0'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          ISSUE: ${{ github.event.issue.number }}
+          VERDICT: ${{ steps.decide.outputs.verdict }}
+        run: |
+          gh issue edit "$ISSUE" --repo "$GITHUB_REPOSITORY" --remove-label ai-ready
+          body="🚫 ai-ready 라벨을 뗐습니다 — ${VERDICT#deny: }"
+          body="$body"$'\n\n'"사람이 이슈(목표·범위·수용 기준)를 검토한 뒤 직접 붙여 주세요. (.github/workflows/ai-ready-guard.yml)"
+          gh issue comment "$ISSUE" --repo "$GITHUB_REPOSITORY" --body "$body"

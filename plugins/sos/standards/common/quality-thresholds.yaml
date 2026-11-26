@@ -1,0 +1,237 @@
+# Quality thresholds — the single source for the numbers quoted in CLAUDE.md / README
+# ("커버리지 ≥80%, 복잡도 ≤15, 함수 ≤50줄, 파일 ≤800줄") and how each language enforces them.
+#
+# Keeping CLAUDE.md / README in step with this file is checked later (roadmap A2, common/enforcement.yaml).
+# This file is a ledger, not evidence. The evidence is tests/enforcement.bats: it reads these numbers,
+# generates an "edge" fixture (exactly at the limit — must pass) and an "over" fixture (limit + 1 — must fail),
+# and runs the pinned real tool with the shipped template config. Change a number here without changing the
+# template config and that test fails.
+#
+# limit: a language-specific number that differs from thresholds (a known deviation, cell must not be ✓).
+#        tests/claims.bats compares common/rules/<lang>.md against it instead of the standard.
+# cell: ✓ = enforced at exactly this number · ≈ = a comparable proxy metric (reason in `measure`)
+#       · script = the tool has no threshold, a script fails the build · pending = not yet proven by a test
+# coverage: every language runs scripts/coverage-gate.sh (roadmap §5-3 definition — changed lines >= N % by diff-cover +
+#   total never below .coverage-baseline). rust · java · kotlin · swift have only the gate (cell script); go · typescript ·
+#   python · csharp · dart · ruby keep their total >= N % check as well (user decision 2026-11-10: both checks, a project
+#   below N % raises its total first). Gate fixtures: tests/enforcement-coverage.bats · enforcement-coverage-langs.bats.
+# (docs/research/2026-11-04_개선-로드맵-신규-개념-적용-검토.md §5-3 — no "intentionally not enforced" cell)
+
+version: 1
+
+thresholds:
+  complexity: 15        # cyclomatic complexity per function, inclusive maximum
+  function_lines: 50    # inclusive maximum, counted as the tool counts (see measure)
+  file_lines: 800       # inclusive maximum, physical lines
+  coverage: 80          # percent, inclusive minimum
+
+languages:
+  go:
+    # not enforced on: *_test.go and cmd/ (funlen), *.gen.go (gocyclo · funlen · revive) — go/templates/.golangci.yml exclusions
+    complexity:
+      cell: "✓"
+      tool: golangci-lint gocyclo (go/templates/.golangci.yml linters.settings.gocyclo.min-complexity)
+      measure: "cyclomatic = 1 + if/for/case/&&/||; min-complexity N reports complexity > N"
+    function_lines:
+      cell: "✓"
+      tool: golangci-lint funlen (linters.settings.funlen.lines)
+      measure: "lines after the func line up to the closing brace, both exclusive — a multi-line signature counts; comment lines excluded, blank lines counted (funlen ignore-comments default); funlen.statements: 40 is an extra limit"
+    file_lines:
+      cell: "✓"
+      tool: golangci-lint revive file-length-limit (linters.settings.revive.rules)
+      measure: "physical lines, comments and blank lines included"
+    coverage:
+      cell: "✓"
+      tool: "common/ci-templates/ci-go.yml step \"Check coverage threshold\" + scripts/coverage-gate.sh (common/testing-templates/coverage-gate.sh) on the PR step \"Coverage gate\" of ci-go.yml (coverprofile → Cobertura by gocover-cobertura, pinned): changed lines vs the base branch >= N % (diff-cover, pinned) and total >= .coverage-baseline (ratchet). Both checks run — user decision 2026-11-10"
+      measure: "total statement coverage (the `total:` line of go tool cover -func). Changed lines: the coverage-gate (tool)"
+  typescript:
+    # tools: the pinned set in typescript-react/templates/dev-dependencies.txt (= tests/enforcement-ts lockfile)
+    # applies to .js/.ts/.tsx alike; not enforced on test files (*.test.*, *.spec.*, tests/, e2e/) for function length
+    complexity:
+      cell: "✓"
+      tool: ESLint complexity (typescript-react/templates/eslint.config.mjs) — "error"; "warn" exits 0 and does not block
+      measure: "cyclomatic per function; max N reports complexity > N"
+    function_lines:
+      cell: "✓"
+      tool: ESLint max-lines-per-function — "error"
+      measure: "whole function including the signature line and the closing brace; blank lines and comments skipped (differs from Go funlen, which counts the body only)"
+    file_lines:
+      cell: "✓"
+      tool: ESLint max-lines — "error"
+      measure: "lines per file, blank lines and comments skipped"
+    coverage:
+      cell: "✓"
+      tool: "Vitest coverage.thresholds (typescript-react/templates/vitest.config.ts) — lines · branches · functions · statements + scripts/coverage-gate.sh (common/testing-templates/coverage-gate.sh) on the PR step \"Coverage gate\" of ci-typescript.yml (coverage/lcov.info): changed lines vs the base branch >= N % (diff-cover, pinned) and total >= .coverage-baseline (ratchet). Both checks run — user decision 2026-11-10"
+      measure: "all four metrics must reach the number; any one below fails `vitest run --coverage`. coverage.include lists every .ts/.tsx, so a module no test imports still counts"
+  python:
+    # evidence: tests/enforcement-python.bats · hooks and CI apply to src/ only (tests/ excluded)
+    complexity:
+      cell: "✓"
+      tool: ruff C901 (python/templates/pyproject-quality.toml lint.mccabe.max-complexity)
+      measure: "McCabe cyclomatic per function; max-complexity N reports complexity > N"
+    function_lines:
+      cell: script
+      tool: pre-commit local hook function-length (python/templates/.pre-commit-config.yaml) — also run by ci-python.yml lint job
+      measure: "physical lines from the def line to the function's last line (ast end_lineno), decorators excluded, blank lines and comments counted. ruff has no line-count rule (PLR0915 counts statements)"
+    file_lines:
+      cell: script
+      tool: pre-commit local hook file-size-limit — also run by ci-python.yml lint job
+      measure: "physical lines (wc -l counts newlines — a last line without a trailing newline is not counted). ruff has no file-length rule"
+    coverage:
+      cell: "✓"
+      tool: "common/ci-templates/ci-python.yml step \"Run tests with coverage\" (pytest --cov-fail-under=COVERAGE_THRESHOLD) + scripts/coverage-gate.sh (common/testing-templates/coverage-gate.sh) on the PR step \"Coverage gate\" of ci-python.yml (coverage.xml): changed lines vs the base branch >= N % (diff-cover, pinned) and total >= .coverage-baseline (ratchet). Both checks run — user decision 2026-11-10"
+      measure: "total statement coverage of SRC_DIR. Changed lines: the coverage-gate (tool)"
+  rust:
+    # evidence: tests/enforcement-rust.bats · gate: rust/templates/.pre-commit-config.yaml (no Rust CI template)
+    # both clippy lints are off by default (nursery · pedantic) — the cargo-clippy hook turns them on with -W
+    # local hook only: --no-verify or an uninstalled hook skips it. The hook's -W beats Cargo.toml [lints] allow,
+    # but a source #[allow(clippy::...)] still silences a function (prefer #[expect(..., reason)])
+    complexity:
+      cell: "≈"
+      tool: clippy cognitive_complexity (rust/templates/clippy.toml cognitive-complexity-threshold)
+      measure: "cognitive complexity — clippy has no cyclomatic lint. 1 + one per sequential `if` (fixture-verified, clippy 0.1.99 = Rust 1.99); reports > N"
+    function_lines:
+      cell: "≈"
+      limit: 100
+      tool: clippy too_many_lines (rust/templates/clippy.toml too-many-lines-threshold)
+      measure: "code lines of the body only — signature, braces, blank and comment-only lines excluded (looser than Go/TS counting). 100 is clippy's default, kept by user decision 2026-11-06 after research: large projects (ruff, uv, hyper, datafusion) allow the lint, rustfmt layout stretches functions vertically; common/rules/rust.md quotes this limit"
+    file_lines:
+      cell: script
+      tool: pre-commit local hook file-size-limit (rust/templates/.pre-commit-config.yaml)
+      measure: "physical lines (wc -l); clippy has no file-length lint. *_test.rs and tests/ excluded"
+    coverage:
+      cell: script
+      tool: pre-push hook coverage-gate — cargo llvm-cov --lcov (target/lcov.info), then scripts/coverage-gate.sh (common/testing-templates/coverage-gate.sh)
+      measure: "changed lines vs origin/main >= N % (diff-cover, pinned) and total line coverage >= .coverage-baseline (ratchet; skipped with a notice until a baseline is recorded). Gate fixture-verified by tests/enforcement-coverage.bats; the report-producing tool is not run there"
+  java:
+    # evidence: tests/enforcement-java.bats — runs java-spring/templates/checkstyle.xml with the checkstyle version
+    # of quality.gradle.kts toolVersion; gate: Gradle `check` (checkstyleMain, maxErrors/maxWarnings 0) and the
+    # pre-commit checkstyle hook (it prints [SKIP] and passes when ./gradlew is missing). No Java CI template.
+    # Bypasses (fixture-verified): files under a generated/ path are skipped entirely; a source
+    # @SuppressWarnings("checkstyle:...") or // CHECKSTYLE:OFF silences a method (both filters are on)
+    complexity:
+      cell: "✓"
+      tool: checkstyle CyclomaticComplexity (java-spring/templates/checkstyle.xml)
+      measure: "cyclomatic per method, 1 + one per branch token — fixture-verified with `if`; the other checkstyle default tokens are for/while/do/case/catch/?:/&&/|| (switch and default not counted); max N reports complexity > N"
+    function_lines:
+      cell: "✓"
+      tool: checkstyle MethodLength (countEmpty false)
+      measure: "the line holding the opening { through the closing } — signature lines before it, annotations and Javadoc excluded; blank and comment-only lines not counted (fixture-verified with a wrapped signature, checkstyle 14.4.0)"
+    file_lines:
+      cell: "✓"
+      tool: checkstyle FileLength — also the pre-commit file-size-limit hook (src/main only)
+      measure: "physical lines, comments and blank lines included"
+    coverage:
+      cell: script
+      tool: pre-push hook coverage-gate — Gradle jacocoTestReport XML (build/reports/jacoco/test/jacocoTestReport.xml), then scripts/coverage-gate.sh (common/testing-templates/coverage-gate.sh)
+      measure: "changed lines vs origin/main >= N % (diff-cover, pinned) and total line coverage >= .coverage-baseline (ratchet; skipped with a notice until a baseline is recorded). Gate fixture-verified by tests/enforcement-coverage.bats; the report-producing tool is not run there"
+  kotlin:
+    # evidence: tests/enforcement-kotlin.bats — runs kotlin-spring/templates/detekt.yml with the detekt-cli of
+    # libs-quality.versions.toml (Gradle: buildUponDefaultConfig = false → the same config alone). Gates: ci-kotlin.yml
+    # `./gradlew detekt` (build.maxIssues 0) and the pre-push detekt hook. detekt 1.23 reports at value >= threshold,
+    # so detekt.yml thresholds are the standard + 1 (user decision 2026-11-06). detekt 1.23.7 fails to start on JDK 25.
+    # Bypass: a source @Suppress("LongMethod") / @Suppress("CyclomaticComplexMethod") silences a function
+    complexity:
+      cell: "✓"
+      tool: detekt CyclomaticComplexMethod (kotlin-spring/templates/detekt.yml, threshold 16)
+      measure: "cyclomatic per function, 1 + one per branch — fixture-verified with `if`; ignoreSimpleWhenEntries true; reports complexity >= threshold, so 15 passes and 16 fails"
+    function_lines:
+      cell: "✓"
+      tool: detekt LongMethod (threshold 51)
+      measure: "the line holding the opening { through the closing } — signature lines before it, blank and comment-only lines not counted (fixture-verified with a wrapped signature, detekt 1.23.7); reports length >= threshold"
+    file_lines:
+      cell: script
+      limit: 600
+      tool: pre-commit local hook file-size-limit (kotlin-spring/templates/.pre-commit-config.yaml, src/main only)
+      measure: "physical lines (wc -l). detekt has no file-length rule — LargeClass (threshold 601 = 600 pass) counts the code lines of one class (comments excluded), not the file. 600 is the template's own stricter limit, quoted by common/rules/kotlin.md"
+    coverage:
+      cell: script
+      tool: pre-push hook coverage-gate — Gradle jacocoTestReport XML (build/reports/jacoco/test/jacocoTestReport.xml), then scripts/coverage-gate.sh (common/testing-templates/coverage-gate.sh)
+      measure: "changed lines vs origin/main >= N % (diff-cover, pinned) and total line coverage >= .coverage-baseline (ratchet; skipped with a notice until a baseline is recorded). Gate fixture-verified by tests/enforcement-coverage.bats; the report-producing tool is not run there"
+  csharp:
+    # evidence: tests/enforcement-csharp.bats — a solution with csharp-dotnet/templates copied verbatim, `dotnet build`
+    # (SDK of global.json) and the template pre-commit hooks. The numbers live in SonarLint.xml (AdditionalFiles);
+    # without it Sonar defaults apply (S1541 10 · S138 80). Warnings become build errors via TreatWarningsAsErrors.
+    # No C# CI template — gates are the build itself and the local pre-commit / pre-push hooks.
+    complexity:
+      cell: "✓"
+      tool: SonarAnalyzer S1541 (csharp-dotnet/templates/SonarLint.xml maximumFunctionComplexityThreshold)
+      measure: "cyclomatic per method, 1 + one per branch — fixture-verified with `?:`; reports complexity > N"
+    function_lines:
+      cell: "✓"
+      tool: SonarAnalyzer S138 (SonarLint.xml max)
+      measure: "lines between the method's braces (both brace lines excluded); blank and comment-only lines not counted (fixture-verified, SonarAnalyzer 10.4); reports > N"
+    file_lines:
+      cell: script
+      tool: pre-commit local hook file-size-limit (csharp-dotnet/templates/.pre-commit-config.yaml, *.cs and *.csproj)
+      measure: "physical lines (wc -l); no analyzer counts file length"
+    coverage:
+      cell: "✓"
+      tool: "pre-push hook dotnet-test (coverlet.msbuild -p:CollectCoverage=true -p:Threshold=80 -p:ThresholdType=line -p:ThresholdStat=total) + scripts/coverage-gate.sh (common/testing-templates/coverage-gate.sh) on the pre-push hook coverage-gate (every coverage.cobertura.xml — -p:CoverletOutputFormat=cobertura): changed lines vs the base branch >= N % (diff-cover, pinned) and total >= .coverage-baseline (ratchet). Both checks run — user decision 2026-11-10"
+      measure: "line coverage per test project (ThresholdStat total — summed inside one test project, not across the solution); fails below N. coverlet.msbuild is added only to projects whose name contains \"Test\" (case-sensitive), so CollectCoverage is a no-op elsewhere. The `--collect` collector does not read Threshold (it passed 50 %). Changed lines: the coverage-gate (tool)"
+  dart:
+    # evidence: tests/enforcement-dart.bats — runs the flutter-dart/templates pre-commit hooks with pre-commit.
+    # dart analyze has no complexity / function-length rule (dart_code_metrics went commercial as DCM), so a script
+    # does it: tool/quality_metrics (a package of its own — its analyzer does not clash with custom_lint's).
+    # All four cells are local hooks (no Dart CI template); --no-verify or an uninstalled hook skips them.
+    complexity:
+      cell: script
+      tool: pre-commit hook dart-metrics (tool/quality_metrics/bin/quality_metrics.dart --max-complexity, package:analyzer)
+      measure: "cyclomatic per function, method, constructor (initializer list included) and closure: 1 + if / for / while / do / case / catch / ?: / && / || / ?? — fixture-verified with nine kinds mixed (if ?: && || ?? for while catch case); closures are measured on their own; a file with a syntax error fails; reports > N"
+    function_lines:
+      cell: script
+      tool: pre-commit hook dart-metrics (--max-lines)
+      measure: "physical lines from the declaration (doc comments and annotations excluded) to its last line, blank and comment lines included (fixture-verified); lib/ only"
+    file_lines:
+      cell: script
+      tool: pre-commit local hook file-size-limit (flutter-dart/templates/.pre-commit-config.yaml)
+      measure: "physical lines (wc -l); *.g.dart / *.freezed.dart / *.gen.dart excluded"
+    coverage:
+      cell: script
+      tool: "pre-push hook flutter-test — `flutter test --coverage` then tool/quality_metrics/bin/coverage_check.dart coverage/lcov.info 80 + scripts/coverage-gate.sh (common/testing-templates/coverage-gate.sh) on the pre-push hook coverage-gate (coverage/lcov.info): changed lines vs the base branch >= N % (diff-cover, pinned) and total >= .coverage-baseline (ratchet). Both checks run — user decision 2026-11-10"
+      measure: "sum of LH / sum of LF over coverage/lcov.info; fails below N. lcov lists only files the tests loaded — a lib/ file no test imports is not in the denominator. The test feeds lcov from a fake flutter — that Flutter writes lcov.info is not exercised here"
+  swift:
+    # evidence: tests/enforcement-swift.bats — runs swift/templates/.swiftlint.yml through the pre-commit hook
+    # `swiftlint lint --strict` (SwiftLint 0.65.1; on Linux it needs the Swift toolchain's SourceKit).
+    # --strict fails on warnings, so the warning number is the real limit — the template sets warning = error.
+    # Local hook only (no Swift CI template). Bypasses (reproduced): `// swiftlint:disable:this <rule>` on the
+    # declaration line, a `// swiftlint:disable <rule>` … `// swiftlint:enable <rule>` pair, and a file-wide
+    # `// swiftlint:disable file_length` (file_length is in blanket_disable_command's allowed rules) — the
+    # file-size-limit hook (physical lines) still catches the last one. The runner's Swift toolchain is not pinned.
+    complexity:
+      cell: "≈"
+      tool: SwiftLint cyclomatic_complexity (swift/templates/.swiftlint.yml, warning = error = 14)
+      measure: "SwiftLint counts if / guard / for / while / repeat / catch, with no +1 — 14 here = '1 + branches <= 15' for those (fixture-verified with if). ?: / && / || / ?? and (ignores_case_statements: true) case are not counted, so a switch-heavy or boolean-heavy function is measured lower than McCabe; reports > 14"
+    function_lines:
+      cell: "✓"
+      tool: SwiftLint function_body_length (warning = error = 50)
+      measure: "lines between the braces, comment and blank lines excluded (fixture-verified); reports > N"
+    file_lines:
+      cell: "✓"
+      tool: SwiftLint file_length (warning = error = 800, ignore_comment_only_lines) and the pre-commit file-size-limit hook (physical lines) — both fixture-verified
+      measure: "lines excluding comment-only and blank lines; the hook counts physical lines, so it is the stricter of the two"
+    coverage:
+      cell: script
+      tool: pre-push hook coverage-gate — swift test --enable-code-coverage + llvm-cov export -format=lcov (.build/lcov.info), then scripts/coverage-gate.sh (common/testing-templates/coverage-gate.sh)
+      measure: "changed lines vs origin/main >= N % (diff-cover, pinned) and total line coverage >= .coverage-baseline (ratchet; skipped with a notice until a baseline is recorded). Gate fixture-verified by tests/enforcement-coverage.bats; the report-producing tool is not run there (the Swift hook was run end to end once, by hand, with Swift 6.4.1 on Linux)"
+  ruby:
+    # evidence: tests/enforcement-ruby.bats — runs ruby-rails/templates (.rubocop.yml, .simplecov, pre-commit hooks) with
+    # the gems of tests/enforcement-ruby/Gemfile.lock. .rubocop.yml inherits rubocop-rails-omakase, which turns the
+    # whole Metrics department off — each Metrics cop needs `Enabled: true` (before 2026-11-06 none had it, and the
+    # remote rubocop hook could not even start: omakase was missing from its gems). Local hooks only (no Ruby CI template).
+    complexity:
+      cell: "✓"
+      tool: RuboCop Metrics/CyclomaticComplexity (ruby-rails/templates/.rubocop.yml, Enabled + Max) via the rubocop hook (bundle exec)
+      measure: "cyclomatic per method, 1 + one per branch — fixture-verified with `if` modifiers; reports > Max. Metrics/PerceivedComplexity (Max 15) catches the same fixture — turning one cop off is not enough. PerceivedComplexity is stricter than McCabe (if/else counts 2): a method with 8 if/else branches (cyclomatic 9) is rejected at 17/15"
+    function_lines:
+      cell: "✓"
+      tool: RuboCop Metrics/MethodLength (Enabled + Max; CountAsOne array / heredoc / method_call)
+      measure: "code lines between def and end — blank and comment lines not counted (fixture-verified, RuboCop 1.92.2)"
+    file_lines:
+      cell: script
+      tool: pre-commit local hook file-size-limit (ruby-rails/templates/.pre-commit-config.yaml, *.rb / *.erb)
+      measure: "physical lines (wc -l); RuboCop has no file-length cop (ClassLength / ModuleLength count one class)"
+    coverage:
+      cell: "✓"
+      tool: "pre-push hook rspec — SimpleCov minimum_coverage (ruby-rails/templates/.simplecov), loaded by `require \\\"simplecov\\\"` in spec_helper + scripts/coverage-gate.sh (common/testing-templates/coverage-gate.sh) on the pre-push hook coverage-gate (coverage/coverage.xml — gem simplecov-cobertura): changed lines vs the base branch >= N % (diff-cover, pinned) and total >= .coverage-baseline (ratchet). Both checks run — user decision 2026-11-10"
+      measure: "line coverage of track_files {app,lib}/**/*.rb; fails below N (exit 2). RSpec projects only — the hook runs when spec/ exists (a Minitest-only test/ project is not checked). Needs the project's spec_helper to require simplecov and SimpleCov.start first; SimpleCov 1.3 deprecates SimpleCov.start / add_filter / add_group inside .simplecov and minimum_coverage_by_file (still work)"

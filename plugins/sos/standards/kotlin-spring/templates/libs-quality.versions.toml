@@ -1,0 +1,56 @@
+# ──────────────────────────────────────────────────────────────────────────────
+# libs-quality.versions.toml — 품질 도구 버전 카탈로그 추가분
+# 기존 gradle/libs.versions.toml에 병합하세요
+# 버전: 2026-11-12 기준 최신 정식판(프리릴리스 제외 · 배포 7일 이상) — 정본 규칙은 저장소 CLAUDE.md
+# ──────────────────────────────────────────────────────────────────────────────
+
+[versions]
+# 정적 분석
+# 사용자 결정 2026-11-12: detekt 만 프리릴리스 허용(JDK 25 — 정식 1.23.8 은 JDK 25 위 Gradle 에서 실패). 정식 2.0.0 이 나오면 옮긴다
+detekt                  = "2.0.0-alpha.6"
+ktlint-gradle           = "14.2.0"
+
+# 보안
+owasp-dependency-check  = "13.0.0"
+
+# 아키텍처 검증
+archunit                = "1.5.1"
+
+# 테스트
+mockk                   = "1.14.11"
+kotest                  = "6.2.6"
+testcontainers          = "2.0.5"
+springmockk             = "5.0.1"
+
+# 커버리지
+jacoco                  = "0.8.16"
+
+[libraries]
+# ArchUnit
+archunit-junit5         = { module = "com.tngtech.archunit:archunit-junit5",          version.ref = "archunit" }
+
+# MockK
+mockk                   = { module = "io.mockk:mockk",                                version.ref = "mockk" }
+mockk-spring            = { module = "com.ninja-squad:springmockk",                   version.ref = "springmockk" }
+
+# Kotest
+kotest-runner-junit5    = { module = "io.kotest:kotest-runner-junit5",                version.ref = "kotest" }
+kotest-assertions-core  = { module = "io.kotest:kotest-assertions-core",              version.ref = "kotest" }
+kotest-property         = { module = "io.kotest:kotest-property",                     version.ref = "kotest" }
+kotest-spring           = { module = "io.kotest:kotest-extensions-spring",            version.ref = "kotest" }
+
+# Testcontainers
+testcontainers-junit5   = { module = "org.testcontainers:testcontainers-junit-jupiter", version.ref = "testcontainers" }
+testcontainers-mysql    = { module = "org.testcontainers:testcontainers-mysql",       version.ref = "testcontainers" }
+testcontainers-postgres = { module = "org.testcontainers:testcontainers-postgresql",  version.ref = "testcontainers" }
+testcontainers-kafka    = { module = "org.testcontainers:testcontainers-kafka",       version.ref = "testcontainers" }
+
+[bundles]
+kotest      = ["kotest-runner-junit5", "kotest-assertions-core", "kotest-property"]
+mockk-all   = ["mockk", "mockk-spring"]
+testcontainers = ["testcontainers-junit5", "testcontainers-postgres"]
+
+[plugins]
+detekt              = { id = "dev.detekt",                      version.ref = "detekt" }
+ktlint              = { id = "org.jlleitschuh.gradle.ktlint",   version.ref = "ktlint-gradle" }
+owasp-check         = { id = "org.owasp.dependencycheck",       version.ref = "owasp-dependency-check" }

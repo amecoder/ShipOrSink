@@ -1,0 +1,106 @@
+repos:
+  # ── File hygiene ───────────────────────────────────────────────────────────
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v4.6.0
+    hooks:
+      - id: trailing-whitespace
+      - id: end-of-file-fixer
+      - id: check-yaml
+      - id: check-json
+      - id: check-xml
+      - id: check-merge-conflict
+      - id: check-added-large-files
+        args: ["--maxkb=500"]
+      - id: no-commit-to-branch
+        args: ["--branch", "main", "--branch", "master"]
+      - id: detect-private-key
+
+  # ── dotnet-format — verify on commit ──────────────────────────────────────
+  - repo: local
+    hooks:
+      - id: dotnet-format
+        name: dotnet format (whitespace + style)
+        entry: bash -c 'dotnet format --no-restore --verify-no-changes --severity warn'
+        language: system
+        types_or: [c#]
+        pass_filenames: false
+
+  # ── dotnet build — push 시 컴파일 + 분석기 검증 ───────────────────────────
+  - repo: local
+    hooks:
+      - id: dotnet-build
+        name: dotnet build (analyzers)
+        entry: bash -c 'dotnet build --no-restore -warnaserror -p:TreatWarningsAsErrors=true'
+        language: system
+        types_or: [c#]
+        pass_filenames: false
+        stages: [pre-push]
+
+  # ── dotnet test — push 시 테스트 + 커버리지 ───────────────────────────────
+  # Threshold 는 coverlet.msbuild 속성이라 CollectCoverage=true 일 때만 판정한다. `--collect:"XPlat Code Coverage"`
+  # (collector 방식)는 Threshold 를 읽지 않아 커버리지가 낮아도 통과한다 — 리포트가 필요하면 별도로 돌린다
+  - repo: local
+    hooks:
+      - id: dotnet-test
+        name: dotnet test
+        entry: bash -c 'dotnet test --no-restore -p:CollectCoverage=true -p:CoverletOutputFormat=cobertura -p:Threshold=80 -p:ThresholdType=line -p:ThresholdStat=total'
+        language: system
+        types_or: [c#]
+        pass_filenames: false
+        stages: [pre-push]
+
+      # 바뀐 줄 80% + 전체가 .coverage-baseline 아래로 떨어지지 않음 — 위 훅이 쓴 리포트를 읽는다(전체 80% 검사와 함께 둔다).
+      # scripts/coverage-gate.sh 는 bootstrap 이 복사한다(uv 또는 pipx · origin/main 필요). 첫 적용: --write-baseline 후 .coverage-baseline 커밋
+      - id: coverage-gate
+        name: Coverage gate (changed lines 80% + ratchet)
+        entry: >
+          bash -c 'r=$(find . -name coverage.cobertura.xml -not -path "./.git/*" -not -path "*/bin/*" -not -path "*/obj/*" -not -path "*/TestResults/*");
+            [ -n "$r" ] || { echo "FAIL: no coverage.cobertura.xml — run the dotnet-test hook first"; exit 1; };
+            scripts/coverage-gate.sh $r'
+        language: system
+        types_or: [c#]
+        pass_filenames: false
+        stages: [pre-push]
+
+  # ── dotnet list package --vulnerable — 알려진 CVE 스캔 ────────────────────
+  - repo: local
+    hooks:
+      - id: dotnet-vulnerable
+        name: dotnet list package --vulnerable
+        entry: bash -c 'OUT=$(dotnet list package --vulnerable --include-transitive 2>&1); echo "$OUT"; echo "$OUT" | grep -q ">" && exit 1 || exit 0'
+        language: system
+        pass_filenames: false
+        stages: [pre-push]
+
+  # ── detect-secrets — secret detection ─────────────────────────────────────
+  - repo: https://github.com/Yelp/detect-secrets
+    rev: v1.5.0
+    hooks:
+      - id: detect-secrets
+        args: ["--baseline", ".secrets.baseline"]
+
+  # ── 파일 크기 한도 (800 lines) ────────────────────────────────────────────
+  - repo: local
+    hooks:
+      - id: file-size-limit
+        name: File size limit (800 lines)
+        entry: >
+          bash -c 'f=0; for x in "$@"; do
+            l=$(( $(wc -l < "$x") )); if [ "$l" -gt 800 ]; then
+            echo "FAIL: $x ($l lines, max 800)"; f=1; fi; done; exit $f' --
+        language: system
+        files: \.(cs|csproj)$
+        exclude: ".*\\.Designer\\.cs$|.*\\.g\\.cs$"
+
+  # ── 테스트 영수증 대조 (push 시) ──────────────────────────────────────────
+  # apply.sh --only hooks 가 배치한 .githooks/pre-push 를 pre-commit 이 실행한다 (git 훅 경로 설정 불필요)
+  # 설치: pre-commit install --hook-type pre-commit --hook-type pre-push
+  - repo: local
+    hooks:
+      - id: test-receipt-pre-push
+        name: test receipt (pre-push)
+        entry: .githooks/pre-push
+        language: script
+        stages: [pre-push]
+        always_run: true
+        pass_filenames: false

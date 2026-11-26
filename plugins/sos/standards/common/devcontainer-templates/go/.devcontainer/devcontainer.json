@@ -1,0 +1,159 @@
+{
+  // ============================================================================
+  // Go DevContainer 템플릿
+  // ============================================================================
+  // 사용법: 이 디렉토리(.devcontainer/)를 프로젝트 루트에 복사하세요.
+  //   cp -r common/devcontainer-templates/go/.devcontainer /path/to/project/
+  //
+  // 베이스: Go 1.26 + Debian Bookworm
+  // 포함: golangci-lint v2, gofumpt, gosec, govulncheck, delve
+  // ============================================================================
+
+  "name": "Go 1.26 Dev",
+
+  // Microsoft 공식 Go DevContainer 이미지
+  "image": "mcr.microsoft.com/devcontainers/go:2-1.26-bookworm",
+
+  // === Features (추가 도구 설치) ===
+  "features": {
+    // 공통 유틸리티 (zsh, Oh My Zsh)
+    "ghcr.io/devcontainers/features/common-utils:2": {
+      "installZsh": true,
+      "configureZshAsDefaultShell": true,
+      "installOhMyZsh": true
+    },
+    // Docker-in-Docker
+    "ghcr.io/devcontainers/features/docker-in-docker:2": {
+      "dockerDashComposeVersion": "v2"
+    },
+    // Git (최신 버전)
+    "ghcr.io/devcontainers/features/git:1": {},
+    // GitHub CLI
+    "ghcr.io/devcontainers/features/github-cli:1": {},
+    // kubectl + Helm
+    "ghcr.io/devcontainers/features/kubectl-helm-minikube:1": {
+      "helm": "latest",
+      "minikube": "none"
+    }
+  },
+
+  // === VS Code 확장 프로그램 + 설정 ===
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        // --- Go 핵심 ---
+        "golang.go",
+
+        // --- 코드 품질 ---
+        "SonarSource.sonarlint-vscode",
+        "usernamehw.errorlens",
+
+        // --- Git ---
+        "eamodio.gitlens",
+        "mhutchie.git-graph",
+
+        // --- 생산성 ---
+        "EditorConfig.EditorConfig",
+        "redhat.vscode-yaml",
+        "ms-azuretools.vscode-docker",
+        "zxh404.vscode-proto3",
+
+        // --- 테스트 ---
+        "premparihar.gotestexplorer"
+      ],
+      "settings": {
+        // Go 설정
+        "go.useLanguageServer": true,
+        "go.lintTool": "golangci-lint",
+        "go.lintFlags": ["--fast-only"],
+        "go.formatTool": "gofumpt",
+        "go.testFlags": ["-v", "-race"],
+        "go.coverOnSave": true,
+        "go.coverOnSingleTest": true,
+
+        // gopls 설정
+        "gopls": {
+          "ui.semanticTokens": true,
+          "formatting.gofumpt": true,
+          "ui.diagnostic.analyses": {
+            "fieldalignment": true,
+            "shadow": true,
+            "unusedparams": true,
+            "unusedwrite": true
+          }
+        },
+
+        // 에디터 공통
+        "editor.formatOnSave": true,
+        "[go]": {
+          "editor.defaultFormatter": "golang.go",
+          "editor.codeActionsOnSave": {
+            "source.organizeImports": "explicit"
+          },
+          "editor.tabSize": 4,
+          "editor.insertSpaces": false
+        },
+        "[go.mod]": {
+          "editor.defaultFormatter": "golang.go"
+        },
+        "editor.rulers": [100, 120],
+        "files.trimTrailingWhitespace": true,
+        "files.insertFinalNewline": true,
+        "files.trimFinalNewlines": true,
+
+        // 터미널
+        "terminal.integrated.defaultProfile.linux": "zsh",
+
+        // Git
+        "git.autofetch": true
+      }
+    }
+  },
+
+  // === 포트 포워딩 ===
+  "forwardPorts": [8080, 8443, 5432, 6379, 2345],
+  "portsAttributes": {
+    "8080": {
+      "label": "HTTP Server",
+      "onAutoForward": "notify",
+      "protocol": "http"
+    },
+    "8443": {
+      "label": "HTTPS Server",
+      "onAutoForward": "silent",
+      "protocol": "https"
+    },
+    "5432": {
+      "label": "PostgreSQL",
+      "onAutoForward": "silent"
+    },
+    "6379": {
+      "label": "Redis",
+      "onAutoForward": "silent"
+    },
+    "2345": {
+      "label": "Delve Debugger",
+      "onAutoForward": "silent"
+    }
+  },
+
+  // === 라이프사이클 명령 ===
+  // 컨테이너 생성 완료 후: Go 도구 설치
+  "postCreateCommand": "go install github.com/golangci/golangci-lint/v2/cmd/golangci-lint@latest && go install mvdan.cc/gofumpt@latest && go install github.com/securego/gosec/v2/cmd/gosec@latest && go install golang.org/x/vuln/cmd/govulncheck@latest && go install github.com/go-delve/delve/cmd/dlv@latest && go mod download 2>/dev/null; echo 'Go dev container ready!'",
+
+  // === 환경 변수 ===
+  "containerEnv": {
+    "CGO_ENABLED": "0",
+    "GOFLAGS": "-mod=readonly"
+  },
+
+  // === 볼륨 마운트 (캐시 영속화) ===
+  "mounts": [
+    "source=go-mod-cache,target=/home/vscode/go/pkg/mod,type=volume",
+    "source=go-build-cache,target=/home/vscode/.cache/go-build,type=volume",
+    "source=go-lint-cache,target=/home/vscode/.cache/golangci-lint,type=volume"
+  ],
+
+  // === 비루트 사용자 ===
+  "remoteUser": "vscode"
+}

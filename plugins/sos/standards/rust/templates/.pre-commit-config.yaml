@@ -1,0 +1,114 @@
+repos:
+  # ── File hygiene ───────────────────────────────────────────────────────────
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v4.6.0
+    hooks:
+      - id: trailing-whitespace
+      - id: end-of-file-fixer
+      - id: check-yaml
+      - id: check-toml
+      - id: check-merge-conflict
+      - id: check-added-large-files
+        args: ["--maxkb=500"]
+      - id: no-commit-to-branch
+        args: ["--branch", "main", "--branch", "master"]
+      - id: detect-private-key
+
+  # ── cargo fmt — Rust formatting ────────────────────────────────────────────
+  - repo: local
+    hooks:
+      - id: cargo-fmt
+        name: cargo fmt
+        entry: cargo fmt --all --
+        language: system
+        types: [rust]
+        pass_filenames: false
+
+  # ── cargo clippy — lint (correctness + suspicious = deny) ──────────────────
+  # cognitive_complexity(nursery)·too_many_lines(pedantic) 는 기본 꺼짐 — 켜야 clippy.toml 의 한도(15 · 100)가 적용된다
+  - repo: local
+    hooks:
+      - id: cargo-clippy
+        name: cargo clippy
+        entry: cargo clippy --all-targets --all-features -- -D warnings -W clippy::cognitive_complexity -W clippy::too_many_lines
+        language: system
+        types: [rust]
+        pass_filenames: false
+
+  # ── cargo test — run tests on push ─────────────────────────────────────────
+  - repo: local
+    hooks:
+      - id: cargo-test
+        name: cargo test
+        entry: cargo test --all-features
+        language: system
+        types: [rust]
+        pass_filenames: false
+        stages: [pre-push]
+
+  # ── cargo audit — known CVE scanning on push ──────────────────────────────
+  - repo: local
+    hooks:
+      - id: cargo-audit
+        name: cargo audit
+        entry: cargo audit
+        language: system
+        pass_filenames: false
+        stages: [pre-push]
+
+  # ── cargo deny — license + vulnerability + ban check on push ───────────────
+  - repo: local
+    hooks:
+      - id: cargo-deny
+        name: cargo deny
+        entry: cargo deny check
+        language: system
+        pass_filenames: false
+        stages: [pre-push]
+
+  # ── detect-secrets — secret detection ──────────────────────────────────────
+  - repo: https://github.com/Yelp/detect-secrets
+    rev: v1.5.0
+    hooks:
+      - id: detect-secrets
+        args: ["--baseline", ".secrets.baseline"]
+
+  # ── file size limit ────────────────────────────────────────────────────────
+  # Rust files: 800 lines max (consistent with dev-standards policy)
+  - repo: local
+    hooks:
+      - id: file-size-limit
+        name: File size limit (800 lines)
+        entry: >
+          bash -c 'f=0; for x in "$@"; do
+            l=$(( $(wc -l < "$x") )); if [ "$l" -gt 800 ]; then
+            echo "FAIL: $x ($l lines, max 800)"; f=1; fi; done; exit $f' --
+        language: system
+        files: \.rs$
+        exclude: "_test\\.rs$|tests/.*\\.rs$"
+
+  # ── coverage gate (push) — changed lines 80% + total never below .coverage-baseline ─────
+  # scripts/coverage-gate.sh (copied by bootstrap; needs uv). Report: cargo-llvm-cov (`cargo install cargo-llvm-cov`).
+  # First adoption: run it once with --write-baseline and commit .coverage-baseline.
+  - repo: local
+    hooks:
+      - id: coverage-gate
+        name: Coverage gate (changed lines 80% + ratchet)
+        entry: bash -c 'cargo llvm-cov --lcov --output-path target/lcov.info && scripts/coverage-gate.sh target/lcov.info'
+        language: system
+        pass_filenames: false
+        types: [rust]
+        stages: [pre-push]
+
+  # ── 테스트 영수증 대조 (push 시) ──────────────────────────────────────────
+  # apply.sh --only hooks 가 배치한 .githooks/pre-push 를 pre-commit 이 실행한다 (git 훅 경로 설정 불필요)
+  # 설치: pre-commit install --hook-type pre-commit --hook-type pre-push
+  - repo: local
+    hooks:
+      - id: test-receipt-pre-push
+        name: test receipt (pre-push)
+        entry: .githooks/pre-push
+        language: script
+        stages: [pre-push]
+        always_run: true
+        pass_filenames: false

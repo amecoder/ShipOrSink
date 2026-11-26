@@ -1,0 +1,124 @@
+# =============================================================================
+# Kubernetes HPA (Horizontal Pod Autoscaler) 매니페스트
+# =============================================================================
+# 사용법: 플레이스홀더를 실제 값으로 치환하세요.
+#   sed -e 's/APP_NAME/myapp/g' -e 's/NAMESPACE/platform-prod/g' hpa.yaml
+#
+# 사전 요구사항:
+#   - metrics-server 설치 (CPU/Memory 메트릭 수집)
+#   - Deployment의 resources.requests 반드시 설정 (HPA 계산 기준)
+#   - 커스텀 메트릭 사용 시: Prometheus Adapter 설치
+#
+# 참고: HPA 사용 시 Deployment의 replicas 필드를 제거하거나 HPA가 관리하도록 설정
+# =============================================================================
+
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: APP_NAME                        # HPA 이름 (Deployment와 동일 권장)
+  namespace: NAMESPACE                  # 네임스페이스
+  labels:
+    app: APP_NAME
+    environment: ENVIRONMENT
+    team: TEAM_NAME
+spec:
+  # --- 스케일링 대상 ---
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: APP_NAME                      # deployment.yaml의 metadata.name과 동일
+
+  # --- 레플리카 범위 ---
+  minReplicas: MIN_REPLICAS             # 최소 Pod 수 (예: 2) — 고가용성 위해 2 이상 권장
+  maxReplicas: MAX_REPLICAS             # 최대 Pod 수 (예: 10) — 비용/리소스 한도 고려
+
+  # --- 스케일링 메트릭 ---
+  metrics:
+    # CPU 사용률 기반 스케일링
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: 70        # 평균 CPU 70% 초과 시 스케일 아웃
+                                        # (deployment.yaml의 resources.requests.cpu 기준)
+
+    # 메모리 사용률 기반 스케일링
+    - type: Resource
+      resource:
+        name: memory
+        target:
+          type: Utilization
+          averageUtilization: 80        # 평균 메모리 80% 초과 시 스케일 아웃
+                                        # (deployment.yaml의 resources.requests.memory 기준)
+
+    # 커스텀 메트릭 기반 스케일링 (Prometheus Adapter 필요, 필요 시 주석 해제)
+    # RPS(초당 요청 수) 기준
+    # - type: Pods
+    #   pods:
+    #     metric:
+    #       name: http_requests_per_second   # Prometheus 메트릭 이름
+    #     target:
+    #       type: AverageValue
+    #       averageValue: "100"              # Pod당 평균 100 RPS 초과 시 스케일 아웃
+
+    # 외부 메트릭 기반 (SQS 큐 길이 등, 필요 시 주석 해제)
+    # - type: External
+    #   external:
+    #     metric:
+    #       name: sqs_queue_length
+    #       selector:
+    #         matchLabels:
+    #           queue: APP_NAME-tasks
+    #     target:
+    #       type: AverageValue
+    #       averageValue: "50"              # 큐 메시지 50개 초과 시 스케일 아웃
+
+  # --- 스케일링 동작 제어 ---
+  behavior:
+    # 스케일 아웃 (확장) 정책
+    scaleUp:
+      stabilizationWindowSeconds: 60    # 확장 결정 후 안정화 대기 시간(초)
+      policies:
+        - type: Percent
+          value: 50                     # 현재 레플리카의 50%까지 한번에 확장
+          periodSeconds: 60             # 60초마다 확장 가능
+        - type: Pods
+          value: 4                      # 또는 한번에 최대 4개 Pod 추가
+          periodSeconds: 60
+      selectPolicy: Max                 # 위 두 정책 중 더 큰 값 적용 (빠른 확장)
+
+    # 스케일 인 (축소) 정책
+    scaleDown:
+      stabilizationWindowSeconds: 300   # 축소 결정 후 5분 안정화 대기 (급격한 축소 방지)
+      policies:
+        - type: Percent
+          value: 25                     # 현재 레플리카의 25%까지 한번에 축소
+          periodSeconds: 120            # 2분마다 축소 가능
+      selectPolicy: Min                 # 가장 보수적인(작은) 값 적용 (안전한 축소)
+
+---
+
+# =============================================================================
+# PodDisruptionBudget (PDB) — 고가용성 워크로드 필수
+# =============================================================================
+# 노드 유지보수, 클러스터 업그레이드 시 최소 가용 Pod 수를 보장한다.
+# HPA와 함께 사용하여 스케일링 + 안정성을 동시에 확보.
+# =============================================================================
+
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: APP_NAME                        # PDB 이름
+  namespace: NAMESPACE
+  labels:
+    app: APP_NAME
+    environment: ENVIRONMENT
+    team: TEAM_NAME
+spec:
+  # minAvailable 또는 maxUnavailable 중 하나만 설정
+  minAvailable: "50%"                   # 최소 50%의 Pod가 항상 실행 중이어야 함
+  # maxUnavailable: 1                   # 또는: 동시에 최대 1개 Pod만 중단 가능
+  selector:
+    matchLabels:
+      app: APP_NAME                     # deployment.yaml의 라벨과 동일

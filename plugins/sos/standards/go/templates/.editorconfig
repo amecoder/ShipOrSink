@@ -1,0 +1,62 @@
+root = true
+
+# ── Global defaults ──────────────────────────────────────────────────────────
+[*]
+charset = utf-8
+end_of_line = lf
+trim_trailing_whitespace = true
+insert_final_newline = true
+
+# ── Go ───────────────────────────────────────────────────────────────────────
+[*.go]
+indent_style = tab
+indent_size = 4
+max_line_length = 120
+
+# ── Go module / sum ──────────────────────────────────────────────────────────
+[go.{mod,sum}]
+indent_style = tab
+indent_size = 4
+
+# ── YAML ─────────────────────────────────────────────────────────────────────
+[*.{yml,yaml}]
+indent_style = space
+indent_size = 2
+
+# ── JSON ─────────────────────────────────────────────────────────────────────
+[*.json]
+indent_style = space
+indent_size = 2
+
+# ── TOML ─────────────────────────────────────────────────────────────────────
+[*.toml]
+indent_style = space
+indent_size = 2
+
+# ── Shell ────────────────────────────────────────────────────────────────────
+[*.sh]
+indent_style = space
+indent_size = 4
+
+# ── Makefile ─────────────────────────────────────────────────────────────────
+[Makefile]
+indent_style = tab
+
+# ── Markdown ─────────────────────────────────────────────────────────────────
+[*.md]
+trim_trailing_whitespace = false
+
+# ── Protocol Buffers ─────────────────────────────────────────────────────────
+[*.proto]
+indent_style = space
+indent_size = 2
+
+# ── SQL ──────────────────────────────────────────────────────────────────────
+[*.sql]
+indent_style = space
+indent_size = 2
+
+# ── Docker ───────────────────────────────────────────────────────────────────
+[Dockerfile*]
+indent_style = space
+indent_size = 4

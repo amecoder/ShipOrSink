@@ -1,0 +1,23 @@
+{"skeleton": [
+  {"type": "rectangle", "id": "a", "x": 0, "y": 0, "width": 200, "height": 80,
+   "backgroundColor": "#a5d8ff", "fillStyle": "solid", "label": {"text": "1. PR 열기\n(에이전트·사람)"}},
+  {"type": "rectangle", "id": "b", "x": 340, "y": 0, "width": 200, "height": 80,
+   "backgroundColor": "#ffec99", "fillStyle": "solid", "label": {"text": "2. verify\nPR 코드로 테스트"}},
+  {"type": "rectangle", "id": "c", "x": 680, "y": 0, "width": 200, "height": 80,
+   "backgroundColor": "#ffec99", "fillStyle": "solid", "label": {"text": "3. verdict\n엔진이 판정"}},
+  {"type": "rectangle", "id": "d", "x": 680, "y": 220, "width": 200, "height": 80,
+   "backgroundColor": "#b2f2bb", "fillStyle": "solid", "label": {"text": "4. 코멘트·라벨\nPASS·HOLD·BLOCK"}},
+  {"type": "rectangle", "id": "e", "x": 340, "y": 220, "width": 200, "height": 80,
+   "backgroundColor": "#a5d8ff", "fillStyle": "solid", "label": {"text": "5. 머지 (자동·사람)\n+ ap:* 라벨"}},
+  {"type": "arrow", "x": 202, "y": 40, "points": [[0, 0], [136, 0]], "width": 136, "height": 0,
+   "start": {"id": "a"}, "end": {"id": "b"}, "label": {"text": "push"}},
+  {"type": "arrow", "x": 542, "y": 40, "points": [[0, 0], [136, 0]], "width": 136, "height": 0,
+   "start": {"id": "b"}, "end": {"id": "c"}, "label": {"text": "결과"}},
+  {"type": "arrow", "x": 780, "y": 82, "points": [[0, 0], [0, 136]], "width": 0, "height": 136,
+   "start": {"id": "c"}, "end": {"id": "d"}},
+  {"type": "arrow", "x": 678, "y": 260, "points": [[0, 0], [-136, 0]], "width": 136, "height": 0,
+   "start": {"id": "d"}, "end": {"id": "e"}, "label": {"text": "보고"}},
+  {"type": "rectangle", "x": 0, "y": 340, "width": 880, "height": 40,
+   "strokeColor": "transparent", "backgroundColor": "transparent",
+   "label": {"text": "tier2 모드: PASS · Tier 1·2 · 사람 리뷰 승인이면 자동 머지, 나머지는 사람이 머지", "fontSize": 18, "strokeColor": "#1e1e1e"}}
+]}

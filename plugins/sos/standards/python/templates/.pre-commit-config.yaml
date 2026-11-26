@@ -1,0 +1,98 @@
+repos:
+  # ── 파일 위생 ──────────────────────────────────────────────────────────────
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v4.6.0
+    hooks:
+      - id: trailing-whitespace
+      - id: end-of-file-fixer
+      - id: check-yaml
+      - id: check-toml
+      - id: check-json
+      - id: check-merge-conflict
+      - id: check-added-large-files
+        args: ["--maxkb=500"]
+      - id: no-commit-to-branch
+        args: ["--branch", "main"]   # main 직접 커밋 차단
+      - id: detect-private-key
+      - id: check-ast                # Python 문법 조기 감지
+
+  # ── Ruff: format → lint 순서 ──────────────────────────────────────────────
+  # [중요] rev는 로컬 ruff 버전과 일치시킬 것: ruff --version
+  # bootstrap.sh 가 자동으로 감지하여 치환합니다
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.14.14
+    hooks:
+      - id: ruff-format
+      - id: ruff
+        args: ["--fix", "--exit-non-zero-on-fix"]
+
+  # ── mypy: 프로젝트 venv 직접 사용 ─────────────────────────────────────────
+  # remote repo mypy는 의존성 지옥 → local hook + venv 방식이 안정적
+  - repo: local
+    hooks:
+      - id: mypy
+        name: mypy type check
+        entry: bash -c 'cd "$(git rev-parse --show-toplevel)" && .venv/bin/mypy "$@" --no-error-summary' --
+        language: system
+        files: ^src/.*\.py$
+        pass_filenames: true
+
+  # ── 시크릿 탐지 ────────────────────────────────────────────────────────────
+  - repo: https://github.com/Yelp/detect-secrets
+    rev: v1.5.0
+    hooks:
+      - id: detect-secrets
+        args: ["--baseline", ".secrets.baseline"]
+
+  # ── 파일 크기 제한 (800줄) ────────────────────────────────────────────────
+  - repo: local
+    hooks:
+      - id: file-size-limit
+        name: File size limit (800 lines)
+        entry: >
+          bash -c 'f=0; for x in "$@"; do
+            l=$(( $(wc -l < "$x") )); if [ "$l" -gt 800 ]; then
+            echo "FAIL: $x ($l lines, max 800)"; f=1; fi; done; exit $f' --
+        language: system
+        files: ^src/.*\.py$
+        exclude: ^tests/
+
+  # ── 함수 길이 제한 (50줄) ────────────────────────────────────────────────
+  # ruff 에는 함수 줄 수 규칙이 없다 (PLR0915 는 문장 수). def 줄부터 마지막 줄까지 물리 줄 수를 센다 —
+  # 데코레이터는 빼고, 본문의 빈 줄·주석은 센다. 정본: dev-standards common/quality-thresholds.yaml
+  - repo: local
+    hooks:
+      - id: function-length
+        name: Function length limit (50 lines)
+        entry: |
+          python3 -c '
+          import ast, sys
+          LIMIT = 50
+          bad = 0
+          for path in sys.argv[1:]:
+              with open(path, "rb") as fh:  # bytes: ast honours coding declarations and a BOM
+                  tree = ast.parse(fh.read(), path)
+              for node in ast.walk(tree):
+                  if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
+                      n = node.end_lineno - node.lineno + 1
+                      if n > LIMIT:
+                          print(f"FAIL: {path}:{node.lineno} {node.name} ({n} lines, max {LIMIT})")
+                          bad = 1
+          sys.exit(bad)
+          '
+        language: system
+        files: ^src/.*\.py$
+        exclude: ^tests/
+
+  # ── 테스트 영수증 대조 (push 시) ──────────────────────────────────────────
+  # apply.sh --only hooks 가 배치한 .githooks/pre-push 를 pre-commit 이 실행한다 (git 훅 경로 설정 불필요)
+  # 설치: pre-commit install --hook-type pre-commit --hook-type pre-push
+  - repo: local
+    hooks:
+      - id: test-receipt-pre-push
+        name: test receipt (pre-push)
+        entry: .githooks/pre-push
+        language: script
+        stages: [pre-push]
+        always_run: true
+        pass_filenames: false

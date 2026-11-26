@@ -1,0 +1,9 @@
+{
+  "//": "global.json — .NET SDK 버전 고정. 팀 전체가 동일한 SDK로 빌드하도록 강제한다.",
+  "//docs": "https://learn.microsoft.com/en-us/dotnet/core/tools/global-json",
+  "sdk": {
+    "version": "8.0.404",
+    "rollForward": "latestFeature",
+    "allowPrerelease": false
+  }
+}

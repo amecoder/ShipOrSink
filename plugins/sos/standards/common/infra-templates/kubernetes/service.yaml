@@ -1,0 +1,52 @@
+# =============================================================================
+# Kubernetes Service 매니페스트 (ClusterIP)
+# =============================================================================
+# 사용법: 플레이스홀더를 실제 값으로 치환하세요.
+#   sed -e 's/APP_NAME/myapp/g' -e 's/NAMESPACE/platform-prod/g' \
+#       -e 's/CONTAINER_PORT/8080/g' service.yaml
+#
+# ClusterIP: 클러스터 내부에서만 접근 가능 (기본값, 가장 안전)
+# 외부 노출은 Ingress 또는 LoadBalancer 타입 사용
+# =============================================================================
+
+apiVersion: v1
+kind: Service
+metadata:
+  name: APP_NAME                        # 서비스 이름 (DNS: APP_NAME.NAMESPACE.svc.cluster.local)
+  namespace: NAMESPACE                  # 네임스페이스
+  labels:
+    # dev-standards 필수 라벨
+    app: APP_NAME
+    version: APP_VERSION
+    environment: ENVIRONMENT
+    team: TEAM_NAME
+  annotations:
+    # Prometheus 서비스 디스커버리 (선택)
+    prometheus.io/scrape: "true"
+    prometheus.io/port: "CONTAINER_PORT"
+spec:
+  type: ClusterIP                       # 클러스터 내부 전용 (외부 노출 불필요)
+  selector:
+    app: APP_NAME                       # Deployment의 Pod 라벨과 일치시킬 것
+  ports:
+    - name: http                        # 포트 이름 (Istio 등 서비스 메시에서 프로토콜 식별용)
+      port: 80                          # 서비스 포트 (클러스터 내부에서 접근 시 사용)
+      targetPort: CONTAINER_PORT        # 컨테이너 포트 (deployment.yaml의 containerPort와 동일)
+      protocol: TCP
+
+    # gRPC 포트 (필요 시 주석 해제)
+    # - name: grpc
+    #   port: 9090                      # gRPC 서비스 포트
+    #   targetPort: 9090                # gRPC 컨테이너 포트
+    #   protocol: TCP
+
+    # 메트릭 포트 (Prometheus 전용, 필요 시 주석 해제)
+    # - name: metrics
+    #   port: 9091                      # 메트릭 수집 포트
+    #   targetPort: 9091
+    #   protocol: TCP
+  # 세션 어피니티 (Sticky Session 필요 시 사용)
+  # sessionAffinity: ClientIP
+  # sessionAffinityConfig:
+  #   clientIP:
+  #     timeoutSeconds: 10800           # 3시간 세션 유지

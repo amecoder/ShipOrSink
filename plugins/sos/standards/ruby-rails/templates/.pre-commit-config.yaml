@@ -1,0 +1,114 @@
+repos:
+  # ── File hygiene ───────────────────────────────────────────────────────────
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v4.6.0
+    hooks:
+      - id: trailing-whitespace
+      - id: end-of-file-fixer
+      - id: check-yaml
+      - id: check-json
+      - id: check-merge-conflict
+      - id: check-added-large-files
+        args: ["--maxkb=500"]
+      - id: no-commit-to-branch
+        args: ["--branch", "main", "--branch", "master"]
+      - id: detect-private-key
+
+  # ── RuboCop — auto-correct + lint on commit ───────────────────────────────
+  # bundle exec, like the other Ruby hooks: the project's Gemfile.lock pins RuboCop and every plugin.
+  # The former remote hook (rubocop/rubocop rev v1.69.2) pinned nothing — its unpinned plugin gems pulled the
+  # newest RuboCop (it ran 1.92.2), and rubocop-rails-omakase (inherited by .rubocop.yml) was not installed,
+  # so the hook failed before linting a single file. --force-exclusion: pre-commit passes file names, and RuboCop
+  # ignores AllCops.Exclude for explicit files — without it --autocorrect rewrote db/schema.rb and friends.
+  - repo: local
+    hooks:
+      - id: rubocop
+        name: RuboCop
+        entry: bundle exec rubocop --autocorrect --fail-fast --force-exclusion
+        language: system
+        types: [ruby]
+
+  # ── Brakeman — Rails 보안 스캔 (push 시) ──────────────────────────────────
+  - repo: local
+    hooks:
+      - id: brakeman
+        name: Brakeman security scan
+        entry: bundle exec brakeman --quiet --no-pager --exit-on-warn --exit-on-error
+        language: system
+        files: \.(rb|erb)$
+        pass_filenames: false
+        stages: [pre-push]
+
+  # ── bundler-audit — 알려진 CVE 의존성 스캔 (push 시) ─────────────────────
+  - repo: local
+    hooks:
+      - id: bundler-audit
+        name: bundler-audit
+        entry: bash -c 'bundle exec bundler-audit check --update'
+        language: system
+        files: Gemfile\.lock
+        pass_filenames: false
+        stages: [pre-push]
+
+  # ── RSpec / Minitest — 테스트 실행 (push 시) ──────────────────────────────
+  - repo: local
+    hooks:
+      - id: rspec
+        name: RSpec
+        entry: bash -c 'if [ -d spec ]; then bundle exec rspec --fail-fast; fi'
+        language: system
+        files: \.(rb)$
+        pass_filenames: false
+        stages: [pre-push]
+
+      # 바뀐 줄 80% + 전체가 .coverage-baseline 아래로 떨어지지 않음 — 위 훅이 쓴 리포트를 읽는다(전체 80% 검사와 함께 둔다).
+      # scripts/coverage-gate.sh 는 bootstrap 이 복사한다(uv 또는 pipx · origin/main 필요). 첫 적용: --write-baseline 후 .coverage-baseline 커밋
+      - id: coverage-gate
+        name: Coverage gate (changed lines 80% + ratchet)
+        entry: bash -c 'if [ -d spec ]; then scripts/coverage-gate.sh coverage/coverage.xml; fi'
+        language: system
+        files: \.(rb)$
+        pass_filenames: false
+        stages: [pre-push]
+
+  # ── ERB Lint — Rails 템플릿 검사 ──────────────────────────────────────────
+  - repo: local
+    hooks:
+      - id: erb-lint
+        name: erb_lint
+        entry: bash -c 'if command -v erb_lint &>/dev/null || bundle exec erb_lint -v &>/dev/null; then bundle exec erb_lint --autocorrect "$@"; fi' --
+        language: system
+        files: \.erb$
+
+  # ── detect-secrets ────────────────────────────────────────────────────────
+  - repo: https://github.com/Yelp/detect-secrets
+    rev: v1.5.0
+    hooks:
+      - id: detect-secrets
+        args: ["--baseline", ".secrets.baseline"]
+
+  # ── 파일 크기 한도 (800 lines) ────────────────────────────────────────────
+  - repo: local
+    hooks:
+      - id: file-size-limit
+        name: File size limit (800 lines)
+        entry: >
+          bash -c 'f=0; for x in "$@"; do
+            l=$(( $(wc -l < "$x") )); if [ "$l" -gt 800 ]; then
+            echo "FAIL: $x ($l lines, max 800)"; f=1; fi; done; exit $f' --
+        language: system
+        files: \.(rb|erb)$
+        exclude: "db/schema\\.rb$|db/structure\\.sql$"
+
+  # ── 테스트 영수증 대조 (push 시) ──────────────────────────────────────────
+  # apply.sh --only hooks 가 배치한 .githooks/pre-push 를 pre-commit 이 실행한다 (git 훅 경로 설정 불필요)
+  # 설치: pre-commit install --hook-type pre-commit --hook-type pre-push
+  - repo: local
+    hooks:
+      - id: test-receipt-pre-push
+        name: test receipt (pre-push)
+        entry: .githooks/pre-push
+        language: script
+        stages: [pre-push]
+        always_run: true
+        pass_filenames: false

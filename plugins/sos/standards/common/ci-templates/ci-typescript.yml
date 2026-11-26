@@ -1,0 +1,290 @@
+# ============================================================================
+# TypeScript / React CI 워크플로우 템플릿
+# ============================================================================
+# 사용법: 이 파일을 프로젝트의 .github/workflows/ 에 복사하세요.
+#   cp ci-typescript.yml <your-project>/.github/workflows/ci.yml
+#
+# 필수 조건:
+#   - eslint.config.mjs (ESLint 9+ Flat Config)
+#   - .prettierrc
+#   - vitest.config.ts (커버리지 thresholds 설정 포함)
+#   - tsconfig.json (strict: true 권장)
+#   - .dependency-cruiser.cjs + devDependency dependency-cruiser (bootstrap 이 둘 다 넣는다 — 없으면 lint 잡이 실패한다.
+#     npx --no 라서 고정되지 않은 버전을 레지스트리에서 받아 실행하는 일은 없다)
+#
+# 패키지 매니저 자동 감지:
+#   - pnpm-lock.yaml 존재 시 pnpm 사용
+#   - package-lock.json 존재 시 npm 사용
+# ============================================================================
+
+name: TypeScript CI
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main]
+
+# 동일 브랜치/PR에서 중복 실행 방지
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+# 최소 권한 원칙
+permissions:
+  contents: read
+
+env:
+  # Node 22 EOL 2027-04; keep equal to the devcontainer (tests/devcontainer.bats)
+  # renovate: datasource=node-version depName=node versioning=semver-partial
+  NODE_VERSION: "24"
+  # renovate: datasource=npm depName=pnpm
+  PNPM_VERSION: "12.16.1"
+  # renovate: datasource=docker depName=semgrep/semgrep
+  SEMGREP_VERSION: "1.177.0@sha256:acaac22ffc7b7cc5926de0751b223bce0b2491c33d18422fa72f632c78d81198"
+
+jobs:
+  # ──────────────────────────────────────────────────────────────────────────
+  # 패키지 매니저 감지
+  # ──────────────────────────────────────────────────────────────────────────
+  detect-pm:
+    name: Detect Package Manager
+    runs-on: ubuntu-latest
+    outputs:
+      manager: ${{ steps.detect.outputs.manager }}
+    steps:
+      # 소스 코드 체크아웃
+      - name: Checkout
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          persist-credentials: false
+      - name: Detect package manager
+        id: detect
+        run: |
+          if [ -f "pnpm-lock.yaml" ]; then
+            echo "manager=pnpm" >> "$GITHUB_OUTPUT"
+          else
+            echo "manager=npm" >> "$GITHUB_OUTPUT"
+          fi
+
+  # ──────────────────────────────────────────────────────────────────────────
+  # 린트 + 포맷 검사
+  # ──────────────────────────────────────────────────────────────────────────
+  lint:
+    name: ESLint & Prettier
+    runs-on: ubuntu-latest
+    needs: detect-pm
+    env:
+      PM: ${{ needs.detect-pm.outputs.manager }}   # read as $PM in run: — never inline ${{ }} into shell
+    steps:
+      # 소스 코드 체크아웃
+      - name: Checkout
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          persist-credentials: false
+      - name: Setup pnpm
+        if: needs.detect-pm.outputs.manager == 'pnpm'
+        uses: pnpm/action-setup@fc06bc1257f339d1d5d8b3a19a8cae5388b55320 # v4.4.0
+        with:
+          version: ${{ env.PNPM_VERSION }}
+
+      # Node.js 환경 구성 + 의존성 캐시
+      - name: Setup Node.js
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: ${{ needs.detect-pm.outputs.manager }}
+
+      # 의존성 설치 (CI 모드 — lock 파일 기반 정확한 버전)
+      - name: Install dependencies
+        run: |
+          if [ "$PM" = "pnpm" ]; then
+            pnpm install --frozen-lockfile
+          else
+            npm ci
+          fi
+
+      # ESLint 실행 — eslint.config.mjs 기반 린트 검사
+      - name: ESLint check
+        run: |
+          if [ "$PM" = "pnpm" ]; then
+            pnpm exec eslint .
+          else
+            npx eslint .
+          fi
+
+      # 의존 규칙 — 순환 import · src/domain·src/application 의 바깥 계층 import 를 막는다 (.dependency-cruiser.cjs)
+      - name: Dependency rules (dependency-cruiser)
+        run: |
+          if [ "$PM" = "pnpm" ]; then
+            pnpm exec depcruise . --config .dependency-cruiser.cjs
+          else
+            npx --no depcruise . --config .dependency-cruiser.cjs
+          fi
+
+      # Prettier 포맷 검사 — 코드 스타일 일관성 확인
+      - name: Prettier check
+        run: |
+          if [ "$PM" = "pnpm" ]; then
+            pnpm exec prettier --check .
+          else
+            npx prettier --check .
+          fi
+
+  # ──────────────────────────────────────────────────────────────────────────
+  # 타입 검사
+  # ──────────────────────────────────────────────────────────────────────────
+  typecheck:
+    name: TypeScript Type Check
+    runs-on: ubuntu-latest
+    needs: detect-pm
+    env:
+      PM: ${{ needs.detect-pm.outputs.manager }}   # read as $PM in run: — never inline ${{ }} into shell
+    steps:
+      # 소스 코드 체크아웃
+      - name: Checkout
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          persist-credentials: false
+      - name: Setup pnpm
+        if: needs.detect-pm.outputs.manager == 'pnpm'
+        uses: pnpm/action-setup@fc06bc1257f339d1d5d8b3a19a8cae5388b55320 # v4.4.0
+        with:
+          version: ${{ env.PNPM_VERSION }}
+
+      # Node.js 환경 구성 + 의존성 캐시
+      - name: Setup Node.js
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: ${{ needs.detect-pm.outputs.manager }}
+
+      # 의존성 설치
+      - name: Install dependencies
+        run: |
+          if [ "$PM" = "pnpm" ]; then
+            pnpm install --frozen-lockfile
+          else
+            npm ci
+          fi
+
+      # tsc --noEmit — JS 출력 없이 타입 오류만 검사
+      - name: TypeScript type check
+        run: |
+          if [ "$PM" = "pnpm" ]; then
+            pnpm exec tsc --noEmit
+          else
+            npx tsc --noEmit
+          fi
+
+  # ──────────────────────────────────────────────────────────────────────────
+  # 테스트 + 커버리지
+  # ──────────────────────────────────────────────────────────────────────────
+  test:
+    name: Test & Coverage
+    runs-on: ubuntu-latest
+    needs: detect-pm
+    env:
+      PM: ${{ needs.detect-pm.outputs.manager }}   # read as $PM in run: — never inline ${{ }} into shell
+    steps:
+      # 소스 코드 체크아웃
+      - name: Checkout
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          persist-credentials: false
+          fetch-depth: 0   # coverage gate: the PR base branch must be in the clone
+      - name: Setup pnpm
+        if: needs.detect-pm.outputs.manager == 'pnpm'
+        uses: pnpm/action-setup@fc06bc1257f339d1d5d8b3a19a8cae5388b55320 # v4.4.0
+        with:
+          version: ${{ env.PNPM_VERSION }}
+
+      # Node.js 환경 구성 + 의존성 캐시
+      - name: Setup Node.js
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: ${{ needs.detect-pm.outputs.manager }}
+
+      # 의존성 설치
+      - name: Install dependencies
+        run: |
+          if [ "$PM" = "pnpm" ]; then
+            pnpm install --frozen-lockfile
+          else
+            npm ci
+          fi
+
+      # Vitest 실행 + 커버리지 측정 (80% 미만 시 실패)
+      # vitest.config.ts에 thresholds 설정이 있어야 합니다
+      - name: Run tests with coverage
+        run: |
+          if [ "$PM" = "pnpm" ]; then
+            pnpm exec vitest run --coverage
+          else
+            npx vitest run --coverage
+          fi
+
+      # 바뀐 줄 80% + 전체가 .coverage-baseline 아래로 떨어지지 않음 — 전체 80% 검사(위 단계)와 함께 둔다.
+      # PR 에서만(비교할 base 브랜치가 있을 때). scripts/coverage-gate.sh 는 bootstrap 이 복사하고,
+      # diff-cover 는 게이트가 고정 버전으로 실행한다(runner 의 pipx 또는 uv)
+      - name: Coverage gate (changed lines + ratchet)
+        if: github.event_name == 'pull_request'
+        env:
+          BASE_REF: ${{ github.base_ref }}   # read as $BASE_REF in run: — never inline ${{ }} into shell
+        run: bash scripts/coverage-gate.sh coverage/lcov.info --compare-branch "origin/$BASE_REF"
+
+      # 커버리지 리포트를 아티팩트로 업로드
+      - name: Upload coverage report
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: coverage-report
+          path: coverage/
+          retention-days: 7
+
+  # ──────────────────────────────────────────────────────────────────────────
+  # 보안 스캔
+  # ──────────────────────────────────────────────────────────────────────────
+  security:
+    name: Security Scan
+    runs-on: ubuntu-latest
+    needs: detect-pm
+    env:
+      PM: ${{ needs.detect-pm.outputs.manager }}   # read as $PM in run: — never inline ${{ }} into shell
+    steps:
+      # 소스 코드 체크아웃
+      - name: Checkout
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          persist-credentials: false
+      - name: Semgrep security scan
+        # semgrep/semgrep-action 은 아카이브됨 → 고정 이미지(태그+다이제스트)로 직접 실행. security-review.yml 과 같은 방식
+        run: |
+          docker run --rm -v "$PWD:/src" -w /src \
+            "semgrep/semgrep:${SEMGREP_VERSION}" \
+            semgrep scan --config p/typescript --config p/react --config p/owasp-top-ten --config p/security-audit \
+              --error --metrics=off --severity WARNING --severity ERROR
+
+      # pnpm 설치 (pnpm 사용 시에만)
+      - name: Setup pnpm
+        if: needs.detect-pm.outputs.manager == 'pnpm'
+        uses: pnpm/action-setup@fc06bc1257f339d1d5d8b3a19a8cae5388b55320 # v4.4.0
+        with:
+          version: ${{ env.PNPM_VERSION }}
+
+      # Node.js 환경 구성
+      - name: Setup Node.js
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: ${{ needs.detect-pm.outputs.manager }}
+
+      # npm/pnpm audit — 의존성 취약점 검사 (production 의존성만)
+      - name: Dependency audit
+        run: |
+          if [ "$PM" = "pnpm" ]; then
+            pnpm audit --prod
+          else
+            npm audit --production --audit-level=high
+          fi

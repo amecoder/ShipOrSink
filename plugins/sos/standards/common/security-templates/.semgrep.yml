@@ -1,0 +1,99 @@
+# Semgrep Configuration
+#
+# 사용법:
+#   1. 이 파일을 프로젝트 루트에 .semgrep.yml로 복사
+#   2. 실행: semgrep scan --config .semgrep.yml
+#   3. CI: semgrep ci (자동으로 .semgrep.yml 참조)
+#
+# 규칙 소스:
+#   - Semgrep Registry (p/owasp-top-ten, p/security-audit 등)
+#   - 커스텀 규칙 (아래 정의)
+
+rules:
+  # ── SQL Injection 방지 ─────────────────────────────────
+  - id: sql-injection-string-format
+    patterns:
+      - pattern-either:
+          - pattern: |
+              $CURSOR.execute(f"..." % ...)
+          - pattern: |
+              $CURSOR.execute("..." + ...)
+          - pattern: |
+              $CURSOR.execute(f"...{...}...")
+    message: >
+      SQL Injection 위험: 문자열 포매팅 대신 파라미터화 쿼리를 사용하세요.
+      cursor.execute("SELECT * FROM users WHERE id = %s", (user_id,))
+    severity: ERROR
+    languages: [python]
+    metadata:
+      owasp: A03:2021 Injection
+      cwe: "CWE-89"
+
+  # ── 하드코딩 시크릿 탐지 ───────────────────────────────
+  - id: hardcoded-secret-assignment
+    patterns:
+      - pattern-either:
+          - pattern: |
+              $VAR = "sk-..."
+          - pattern: |
+              $VAR = "sk_live_..."
+          - pattern: |
+              $VAR = "AKIA..."
+          - pattern: |
+              $VAR = "ghp_..."
+    message: >
+      하드코딩된 시크릿이 감지되었습니다. 환경 변수를 사용하세요.
+    severity: ERROR
+    languages: [python, javascript, typescript, go, java, kotlin]
+    metadata:
+      owasp: A02:2021 Cryptographic Failures
+      cwe: "CWE-798"
+
+  # ── eval() 사용 금지 ───────────────────────────────────
+  - id: dangerous-eval
+    patterns:
+      - pattern-either:
+          - pattern: eval(...)
+          - pattern: exec(...)
+    message: >
+      eval()/exec() 사용 금지. 사용자 입력이 포함되면 코드 인젝션 위험.
+    severity: ERROR
+    languages: [python, javascript, typescript]
+    metadata:
+      owasp: A03:2021 Injection
+      cwe: "CWE-95"
+
+  # ── JWT 비밀키 하드코딩 금지 ────────────────────────────
+  - id: jwt-hardcoded-secret
+    patterns:
+      - pattern-either:
+          - pattern: |
+              jwt.encode(..., "...", ...)
+          - pattern: |
+              jwt.decode(..., "...", ...)
+          - pattern: |
+              Jwts.builder().signWith(..., "...")
+    message: >
+      JWT 시크릿을 하드코딩하지 마세요. 환경 변수나 Vault를 사용하세요.
+    severity: ERROR
+    languages: [python, java, kotlin]
+    metadata:
+      owasp: A02:2021 Cryptographic Failures
+      cwe: "CWE-798"
+
+  # ── 위험한 HTML 렌더링 ─────────────────────────────────
+  - id: dangerous-html-rendering
+    patterns:
+      - pattern-either:
+          - pattern: |
+              dangerouslySetInnerHTML={{__html: $X}}
+          - pattern: |
+              $EL.innerHTML = $X
+    message: >
+      XSS 위험: 사용자 입력을 HTML로 직접 렌더링하지 마세요.
+      DOMPurify.sanitize()를 사용하세요.
+    severity: WARNING
+    languages: [javascript, typescript]
+    metadata:
+      owasp: A03:2021 Injection
+      cwe: "CWE-79"

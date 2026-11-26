@@ -1,0 +1,195 @@
+# ============================================================================
+# Go CI 워크플로우 템플릿
+# ============================================================================
+# 사용법: 이 파일을 프로젝트의 .github/workflows/ 에 복사하세요.
+#   cp ci-go.yml <your-project>/.github/workflows/ci.yml
+#
+# 필수 조건:
+#   - go.mod (Go 모듈 초기화)
+#   - .golangci.yml (golangci-lint v2 설정)
+#   - 테스트 파일 (_test.go)
+# ============================================================================
+
+name: Go CI
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main]
+
+# 동일 브랜치/PR에서 중복 실행 방지
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+# 최소 권한 원칙
+permissions:
+  contents: read
+
+env:
+  # 1.23~1.25 EOL; golangci-lint v2.15 builds with Go 1.26+
+  # renovate: datasource=golang-version depName=go versioning=semver-partial
+  GO_VERSION: "1.26"
+  # pin — `latest` drifts and golangci-lint-action v6 resolved it to v1. = .pre-commit-config.yaml rev
+  # renovate: datasource=github-releases depName=golangci/golangci-lint
+  GOLANGCI_LINT_VERSION: "v2.15.0"
+  # renovate: datasource=go depName=golang.org/x/vuln
+  GOVULNCHECK_VERSION: "v1.9.0"
+  # coverprofile → Cobertura for the coverage gate (diff-cover cannot read coverprofile)
+  # renovate: datasource=go depName=github.com/boumenot/gocover-cobertura
+  GOCOVER_COBERTURA_VERSION: "v1.5.0"
+  # renovate: datasource=docker depName=semgrep/semgrep
+  SEMGREP_VERSION: "1.177.0@sha256:acaac22ffc7b7cc5926de0751b223bce0b2491c33d18422fa72f632c78d81198"
+  # 커버리지 최소 기준 (%)
+  COVERAGE_THRESHOLD: 80
+
+jobs:
+  # ──────────────────────────────────────────────────────────────────────────
+  # 린트 검사
+  # ──────────────────────────────────────────────────────────────────────────
+  lint:
+    name: golangci-lint
+    runs-on: ubuntu-latest
+    steps:
+      # 소스 코드 체크아웃
+      - name: Checkout
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          persist-credentials: false
+      - name: Setup Go
+        uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff # v5.6.0
+        with:
+          go-version: ${{ env.GO_VERSION }}
+
+      # golangci-lint 실행 — .golangci.yml 설정 기반 종합 린트
+      - name: Run golangci-lint
+        uses: golangci/golangci-lint-action@ba0d7d2ec06a0ea1cb5fa41b2e4a3ab91d21278a # v9.3.0 (v7+ = golangci-lint v2 only)
+        with:
+          version: ${{ env.GOLANGCI_LINT_VERSION }}
+          args: --timeout=5m
+
+  # ──────────────────────────────────────────────────────────────────────────
+  # 테스트 + 커버리지
+  # ──────────────────────────────────────────────────────────────────────────
+  test:
+    name: Test & Coverage
+    runs-on: ubuntu-latest
+    steps:
+      # 소스 코드 체크아웃
+      - name: Checkout
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          persist-credentials: false
+          fetch-depth: 0   # coverage gate: the PR base branch must be in the clone
+      - name: Setup Go
+        uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff # v5.6.0
+        with:
+          go-version: ${{ env.GO_VERSION }}
+
+      # 테스트 실행 — race detector 활성화 + 커버리지 프로파일 생성
+      - name: Run tests
+        run: |
+          go test -race -coverprofile=coverage.out -covermode=atomic ./...
+
+      # 커버리지 수치 확인 + 80% 미만 시 실패 처리
+      - name: Check coverage threshold
+        run: |
+          # 전체 커버리지 비율 추출
+          COVERAGE=$(go tool cover -func=coverage.out | grep '^total:' | awk '{print $3}' | tr -d '%')   # ^total: — a func named total* would also match
+          echo "Total coverage: ${COVERAGE}%"
+
+          # 소수점 비교를 위해 awk 사용
+          PASS=$(awk "BEGIN {print ($COVERAGE >= ${{ env.COVERAGE_THRESHOLD }}) ? 1 : 0}")
+          if [ "$PASS" -eq 0 ]; then
+            echo "::error::Coverage ${COVERAGE}% is below threshold ${{ env.COVERAGE_THRESHOLD }}%"
+            exit 1
+          fi
+          echo "Coverage ${COVERAGE}% meets threshold ${{ env.COVERAGE_THRESHOLD }}%"
+
+      # go test 의 coverprofile 은 diff-cover 가 읽지 못한다 — 게이트용 Cobertura XML 로 바꾼다(고정 버전)
+      - name: Convert coverage to Cobertura
+        if: github.event_name == 'pull_request'
+        run: go run "github.com/boumenot/gocover-cobertura@${GOCOVER_COBERTURA_VERSION}" < coverage.out > coverage.xml
+
+      # 바뀐 줄 80% + 전체가 .coverage-baseline 아래로 떨어지지 않음 — 전체 80% 검사(위 단계)와 함께 둔다.
+      # PR 에서만(비교할 base 브랜치가 있을 때). scripts/coverage-gate.sh 는 bootstrap 이 복사하고,
+      # diff-cover 는 게이트가 고정 버전으로 실행한다(runner 의 pipx 또는 uv)
+      - name: Coverage gate (changed lines + ratchet)
+        if: github.event_name == 'pull_request'
+        env:
+          BASE_REF: ${{ github.base_ref }}   # read as $BASE_REF in run: — never inline ${{ }} into shell
+        run: bash scripts/coverage-gate.sh coverage.xml --compare-branch "origin/$BASE_REF"
+
+      # 커버리지 리포트를 아티팩트로 업로드
+      - name: Upload coverage report
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: coverage-report
+          path: coverage.out
+          retention-days: 7
+
+  # ──────────────────────────────────────────────────────────────────────────
+  # 보안 스캔
+  # ──────────────────────────────────────────────────────────────────────────
+  security:
+    name: Security Scan
+    runs-on: ubuntu-latest
+    steps:
+      # 소스 코드 체크아웃
+      - name: Checkout
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          persist-credentials: false
+      - name: Setup Go
+        uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff # v5.6.0
+        with:
+          go-version: ${{ env.GO_VERSION }}
+
+      # gosec — Go 소스 코드 보안 취약점 정적 분석
+      - name: Run gosec
+        uses: securego/gosec@deb54465fea23d19a77f037e11e6589021f8501d # v2.29.0
+        with:
+          args: ./...
+
+      # govulncheck — Go 모듈 의존성의 알려진 취약점(CVE) 검사
+      - name: Run govulncheck
+        run: |
+          go install "golang.org/x/vuln/cmd/govulncheck@${GOVULNCHECK_VERSION}"
+          govulncheck ./...
+
+      # Semgrep SAST 보안 스캔 — Go 전용 룰셋
+      - name: Semgrep security scan
+        # semgrep/semgrep-action 은 아카이브됨 → 고정 이미지(태그+다이제스트)로 직접 실행. security-review.yml 과 같은 방식
+        run: |
+          docker run --rm -v "$PWD:/src" -w /src \
+            "semgrep/semgrep:${SEMGREP_VERSION}" \
+            semgrep scan --config p/golang --config p/owasp-top-ten --config p/security-audit \
+              --error --metrics=off --severity WARNING --severity ERROR
+
+  # ──────────────────────────────────────────────────────────────────────────
+  # 빌드 검증
+  # ──────────────────────────────────────────────────────────────────────────
+  build:
+    name: Build Verify
+    runs-on: ubuntu-latest
+    needs: [lint, test]
+    steps:
+      # 소스 코드 체크아웃
+      - name: Checkout
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          persist-credentials: false
+      - name: Setup Go
+        uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff # v5.6.0
+        with:
+          go-version: ${{ env.GO_VERSION }}
+
+      # go vet — 컴파일러가 잡지 못하는 의심스러운 코드 패턴 검출
+      - name: Run go vet
+        run: go vet ./...
+
+      # 빌드 성공 여부 확인
+      - name: Build
+        run: go build ./...

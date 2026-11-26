@@ -1,0 +1,87 @@
+<Project>
+  <!--
+    Directory.Build.props — 솔루션 전체에 적용되는 공통 설정
+    적용 범위: 같은 디렉토리와 모든 하위 .csproj
+    공식 문서: https://learn.microsoft.com/en-us/visualstudio/msbuild/customize-by-directory
+  -->
+
+  <PropertyGroup>
+    <!-- ── 언어 / 런타임 ─────────────────────────────────────────────────── -->
+    <TargetFramework>net8.0</TargetFramework>
+    <LangVersion>latest</LangVersion>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+
+    <!-- ── 경고를 에러로 ────────────────────────────────────────────────── -->
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+    <WarningsAsErrors />
+    <WarningsNotAsErrors>CS1591</WarningsNotAsErrors>  <!-- XML 주석 누락은 경고로 -->
+    <NoWarn>$(NoWarn);CS1591</NoWarn>
+
+    <!-- ── 분석기 활성화 ────────────────────────────────────────────────── -->
+    <EnableNETAnalyzers>true</EnableNETAnalyzers>
+    <AnalysisLevel>latest-recommended</AnalysisLevel>
+    <AnalysisMode>AllEnabledByDefault</AnalysisMode>
+    <CodeAnalysisTreatWarningsAsErrors>true</CodeAnalysisTreatWarningsAsErrors>
+    <EnforceCodeStyleInBuild>true</EnforceCodeStyleInBuild>
+
+    <!-- ── 결정성(Deterministic) ─────────────────────────────────────────── -->
+    <Deterministic>true</Deterministic>
+    <ContinuousIntegrationBuild Condition="'$(GITHUB_ACTIONS)' == 'true'">true</ContinuousIntegrationBuild>
+
+    <!-- ── 디버그 / 릴리스 ───────────────────────────────────────────────── -->
+    <DebugType>portable</DebugType>
+    <DebugSymbols>true</DebugSymbols>
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    <NeutralLanguage>en-US</NeutralLanguage>
+  </PropertyGroup>
+
+  <!-- ── 모든 프로젝트에 분석기 패키지 적용 ─────────────────────────────── -->
+  <ItemGroup>
+    <PackageReference Include="Microsoft.CodeAnalysis.NetAnalyzers" Version="9.0.0">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+    </PackageReference>
+    <PackageReference Include="SonarAnalyzer.CSharp" Version="10.4.0.108396">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+    </PackageReference>
+    <PackageReference Include="StyleCop.Analyzers" Version="1.2.0-beta.556">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+    </PackageReference>
+    <PackageReference Include="Roslynator.Analyzers" Version="4.13.1">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+    </PackageReference>
+    <PackageReference Include="SecurityCodeScan.VS2019" Version="5.6.7">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+    </PackageReference>
+  </ItemGroup>
+
+  <!-- ── 테스트 프로젝트 별도 설정 ─────────────────────────────────────── -->
+  <PropertyGroup Condition="$(MSBuildProjectName.Contains('Test'))">
+    <IsPackable>false</IsPackable>
+    <NoWarn>$(NoWarn);CA1707;CA2007;SA1600;CS1591</NoWarn>  <!-- 테스트는 일부 규칙 완화 -->
+  </PropertyGroup>
+
+  <!-- ── 커버리지 (Coverlet) — 테스트 프로젝트에 자동 적용 ───────────────── -->
+  <ItemGroup Condition="$(MSBuildProjectName.Contains('Test'))">
+    <PackageReference Include="coverlet.collector" Version="6.0.4">
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+      <PrivateAssets>all</PrivateAssets>
+    </PackageReference>
+    <PackageReference Include="coverlet.msbuild" Version="6.0.4">
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+      <PrivateAssets>all</PrivateAssets>
+    </PackageReference>
+  </ItemGroup>
+
+  <!-- ── stylecop.json · SonarLint.xml 자동 인식 ───────────────────────── -->
+  <!-- SonarLint.xml 이 S1541(복잡도 15)·S138(함수 50줄) 숫자를 넘긴다 — 없으면 Sonar 기본값 10 · 80 -->
+  <ItemGroup>
+    <AdditionalFiles Include="$(MSBuildThisFileDirectory)stylecop.json" Condition="Exists('$(MSBuildThisFileDirectory)stylecop.json')" />
+    <AdditionalFiles Include="$(MSBuildThisFileDirectory)SonarLint.xml" Condition="Exists('$(MSBuildThisFileDirectory)SonarLint.xml')" />
+  </ItemGroup>
+</Project>

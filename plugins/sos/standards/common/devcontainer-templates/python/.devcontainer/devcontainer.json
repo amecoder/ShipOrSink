@@ -1,0 +1,141 @@
+{
+  // ============================================================================
+  // Python DevContainer 템플릿
+  // ============================================================================
+  // 사용법: 이 디렉토리(.devcontainer/)를 프로젝트 루트에 복사하세요.
+  //   cp -r common/devcontainer-templates/python/.devcontainer /path/to/project/
+  //
+  // 베이스: Python 3.12 + Debian Bookworm
+  // 포함: Ruff, mypy, pytest, pre-commit, detect-secrets
+  // ============================================================================
+
+  "name": "Python 3.12 Dev",
+
+  // Microsoft 공식 Python DevContainer 이미지
+  "image": "mcr.microsoft.com/devcontainers/python:3-3.12-bookworm",
+
+  // === Features (추가 도구 설치) ===
+  "features": {
+    // 공통 유틸리티 (zsh, Oh My Zsh)
+    "ghcr.io/devcontainers/features/common-utils:2": {
+      "installZsh": true,
+      "configureZshAsDefaultShell": true,
+      "installOhMyZsh": true
+    },
+    // Docker-in-Docker (컨테이너 빌드/테스트용)
+    "ghcr.io/devcontainers/features/docker-in-docker:2": {
+      "dockerDashComposeVersion": "v2"
+    },
+    // Git (최신 버전)
+    "ghcr.io/devcontainers/features/git:1": {},
+    // GitHub CLI
+    "ghcr.io/devcontainers/features/github-cli:1": {},
+    // Node.js (프론트엔드 도구, pre-commit 등에 필요할 수 있음) — 저장소 전체 Node 버전 하나:
+    // ci-typescript.yml NODE_VERSION 과 같게 유지 (tests/devcontainer.bats)
+    "ghcr.io/devcontainers/features/node:1": {
+      // renovate: datasource=node-version depName=node versioning=semver-partial
+      "version": "24"
+    }
+  },
+
+  // === VS Code 확장 프로그램 + 설정 ===
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        // --- Python 핵심 ---
+        "ms-python.python",
+        "ms-python.debugpy",
+        "ms-python.mypy-type-checker",
+        "charliermarsh.ruff",
+
+        // --- 코드 품질 ---
+        "SonarSource.sonarlint-vscode",
+        "usernamehw.errorlens",
+
+        // --- Git ---
+        "eamodio.gitlens",
+        "mhutchie.git-graph",
+
+        // --- 생산성 ---
+        "EditorConfig.EditorConfig",
+        "redhat.vscode-yaml",
+        "ms-azuretools.vscode-docker",
+        "tamasfe.even-better-toml",
+
+        // --- 테스트 ---
+        "ms-python.pytest-adapter"
+      ],
+      "settings": {
+        // Python 설정
+        "python.defaultInterpreterPath": "/usr/local/bin/python",
+        "python.analysis.typeCheckingMode": "basic",
+        "python.analysis.autoImportCompletions": true,
+
+        // Ruff (린터 + 포매터)
+        "[python]": {
+          "editor.defaultFormatter": "charliermarsh.ruff",
+          "editor.formatOnSave": true,
+          "editor.codeActionsOnSave": {
+            "source.fixAll": "explicit",
+            "source.organizeImports": "explicit"
+          }
+        },
+
+        // 에디터 공통
+        "editor.rulers": [88, 120],
+        "editor.tabSize": 4,
+        "files.trimTrailingWhitespace": true,
+        "files.insertFinalNewline": true,
+        "files.trimFinalNewlines": true,
+
+        // 터미널
+        "terminal.integrated.defaultProfile.linux": "zsh",
+
+        // Git
+        "git.autofetch": true,
+
+        // 테스트
+        "python.testing.pytestEnabled": true,
+        "python.testing.pytestArgs": ["tests"]
+      }
+    }
+  },
+
+  // === 포트 포워딩 ===
+  "forwardPorts": [8000, 5432, 6379],
+  "portsAttributes": {
+    "8000": {
+      "label": "FastAPI / Django",
+      "onAutoForward": "notify",
+      "protocol": "http"
+    },
+    "5432": {
+      "label": "PostgreSQL",
+      "onAutoForward": "silent"
+    },
+    "6379": {
+      "label": "Redis",
+      "onAutoForward": "silent"
+    }
+  },
+
+  // === 라이프사이클 명령 ===
+  // 컨테이너 생성 완료 후: 의존성 설치 + pre-commit + 개발 도구
+  "postCreateCommand": "pip install -e '.[dev]' 2>/dev/null || pip install ruff mypy pytest pytest-cov pre-commit detect-secrets && pre-commit install 2>/dev/null; echo 'Python dev container ready!'",
+
+  // === 환경 변수 ===
+  "containerEnv": {
+    "PYTHONDONTWRITEBYTECODE": "1",
+    "PYTHONUNBUFFERED": "1",
+    "PIP_DISABLE_PIP_VERSION_CHECK": "1"
+  },
+
+  // === 볼륨 마운트 (캐시 영속화) ===
+  "mounts": [
+    "source=python-pip-cache,target=/home/vscode/.cache/pip,type=volume",
+    "source=python-pre-commit-cache,target=/home/vscode/.cache/pre-commit,type=volume"
+  ],
+
+  // === 비루트 사용자 ===
+  "remoteUser": "vscode"
+}

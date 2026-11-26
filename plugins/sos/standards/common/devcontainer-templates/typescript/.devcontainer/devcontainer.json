@@ -1,0 +1,170 @@
+{
+  // ============================================================================
+  // TypeScript/React DevContainer 템플릿
+  // ============================================================================
+  // 사용법: 이 디렉토리(.devcontainer/)를 프로젝트 루트에 복사하세요.
+  //   cp -r common/devcontainer-templates/typescript/.devcontainer /path/to/project/
+  //
+  // 베이스: Node.js 24 LTS + Debian Bookworm
+  // 포함: ESLint 9, Prettier, Vitest, Playwright, Husky
+  // ============================================================================
+
+  "name": "TypeScript / React Dev",
+
+  // Microsoft 공식 Node.js DevContainer 이미지
+  "image": "mcr.microsoft.com/devcontainers/typescript-node:5-24-bookworm",
+
+  // === Features (추가 도구 설치) ===
+  "features": {
+    // 공통 유틸리티 (zsh, Oh My Zsh)
+    "ghcr.io/devcontainers/features/common-utils:2": {
+      "installZsh": true,
+      "configureZshAsDefaultShell": true,
+      "installOhMyZsh": true
+    },
+    // Docker-in-Docker
+    "ghcr.io/devcontainers/features/docker-in-docker:2": {
+      "dockerDashComposeVersion": "v2"
+    },
+    // Git (최신 버전)
+    "ghcr.io/devcontainers/features/git:1": {},
+    // GitHub CLI
+    "ghcr.io/devcontainers/features/github-cli:1": {}
+  },
+
+  // === VS Code 확장 프로그램 + 설정 ===
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        // --- TypeScript 핵심 ---
+        "dbaeumer.vscode-eslint",
+        "esbenp.prettier-vscode",
+
+        // --- React ---
+        "dsznajder.es7-react-js-snippets",
+        "styled-components.vscode-styled-components",
+
+        // --- 코드 품질 ---
+        "SonarSource.sonarlint-vscode",
+        "usernamehw.errorlens",
+
+        // --- Git ---
+        "eamodio.gitlens",
+        "mhutchie.git-graph",
+
+        // --- 생산성 ---
+        "EditorConfig.EditorConfig",
+        "redhat.vscode-yaml",
+        "ms-azuretools.vscode-docker",
+        "bradlc.vscode-tailwindcss",
+        "christian-kohler.path-intellisense",
+
+        // --- 테스트 ---
+        "vitest.explorer",
+        "ms-playwright.playwright"
+      ],
+      "settings": {
+        // TypeScript 설정
+        "typescript.preferences.importModuleSpecifier": "non-relative",
+        "typescript.updateImportsOnFileMove.enabled": "always",
+        "typescript.suggest.autoImports": true,
+
+        // ESLint + Prettier
+        "editor.defaultFormatter": "esbenp.prettier-vscode",
+        "[typescript]": {
+          "editor.defaultFormatter": "esbenp.prettier-vscode",
+          "editor.codeActionsOnSave": {
+            "source.fixAll.eslint": "explicit"
+          }
+        },
+        "[typescriptreact]": {
+          "editor.defaultFormatter": "esbenp.prettier-vscode",
+          "editor.codeActionsOnSave": {
+            "source.fixAll.eslint": "explicit"
+          }
+        },
+        "[json]": {
+          "editor.defaultFormatter": "esbenp.prettier-vscode"
+        },
+        "[jsonc]": {
+          "editor.defaultFormatter": "esbenp.prettier-vscode"
+        },
+
+        // 에디터 공통
+        "editor.formatOnSave": true,
+        "editor.rulers": [100],
+        "editor.tabSize": 2,
+        "files.trimTrailingWhitespace": true,
+        "files.insertFinalNewline": true,
+        "files.trimFinalNewlines": true,
+
+        // 터미널
+        "terminal.integrated.defaultProfile.linux": "zsh",
+
+        // Git
+        "git.autofetch": true,
+
+        // ESLint
+        "eslint.useFlatConfig": true,
+        "eslint.validate": [
+          "javascript",
+          "javascriptreact",
+          "typescript",
+          "typescriptreact"
+        ]
+      }
+    }
+  },
+
+  // === 포트 포워딩 ===
+  "forwardPorts": [3000, 5173, 4173, 6006, 5432, 6379],
+  "portsAttributes": {
+    "3000": {
+      "label": "Next.js / Express",
+      "onAutoForward": "notify",
+      "protocol": "http"
+    },
+    "5173": {
+      "label": "Vite Dev Server",
+      "onAutoForward": "notify",
+      "protocol": "http"
+    },
+    "4173": {
+      "label": "Vite Preview",
+      "onAutoForward": "silent",
+      "protocol": "http"
+    },
+    "6006": {
+      "label": "Storybook",
+      "onAutoForward": "silent",
+      "protocol": "http"
+    },
+    "5432": {
+      "label": "PostgreSQL",
+      "onAutoForward": "silent"
+    },
+    "6379": {
+      "label": "Redis",
+      "onAutoForward": "silent"
+    }
+  },
+
+  // === 라이프사이클 명령 ===
+  // 컨테이너 생성 완료 후: 의존성 설치 + Husky + Playwright 브라우저
+  "postCreateCommand": "npm ci 2>/dev/null || echo 'No package-lock.json found, skipping npm ci'; npx husky install 2>/dev/null; npx playwright install --with-deps chromium 2>/dev/null; echo 'TypeScript dev container ready!'",
+
+  // === 환경 변수 ===
+  "containerEnv": {
+    "NODE_ENV": "development",
+    "NEXT_TELEMETRY_DISABLED": "1"
+  },
+
+  // === 볼륨 마운트 (캐시 영속화) ===
+  "mounts": [
+    "source=ts-npm-cache,target=/home/node/.npm,type=volume",
+    "source=ts-playwright-cache,target=/home/node/.cache/ms-playwright,type=volume"
+  ],
+
+  // === 비루트 사용자 ===
+  "remoteUser": "node"
+}

@@ -1,0 +1,10 @@
+# tool/quality_metrics — the size / complexity / coverage gate of the pre-commit hooks (dev-standards).
+# A package of its own on purpose: the project's dev dependencies (custom_lint needs analyzer ^8) cannot
+# resolve the analyzer this tool uses. The hooks run `dart pub get --directory=tool/quality_metrics` first.
+# analyzer 14.7.0 needs Dart SDK >= 3.13 — on an older SDK pin an older analyzer here (pub.dev: analyzer).
+name: quality_metrics
+publish_to: none
+environment:
+  sdk: ^3.13.0
+dependencies:
+  analyzer: 14.7.0

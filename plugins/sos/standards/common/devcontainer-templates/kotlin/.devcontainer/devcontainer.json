@@ -1,0 +1,159 @@
+{
+  // ============================================================================
+  // Kotlin / Spring Boot DevContainer 템플릿
+  // ============================================================================
+  // 사용법: 이 디렉토리(.devcontainer/)를 프로젝트 루트에 복사하세요.
+  //   cp -r common/devcontainer-templates/kotlin/.devcontainer /path/to/project/
+  //
+  // 베이스: Microsoft Build of OpenJDK 25 (최신 LTS) + Debian Bookworm
+  // 포함: Gradle, detekt, ktlint, JaCoCo
+  // ============================================================================
+
+  "name": "Kotlin / Spring Boot Dev",
+
+  // Microsoft 공식 Java DevContainer 이미지 (Kotlin 호환)
+  "image": "mcr.microsoft.com/devcontainers/java:3-25-bookworm",
+
+  // === Features (추가 도구 설치) ===
+  "features": {
+    // 공통 유틸리티 (zsh, Oh My Zsh)
+    "ghcr.io/devcontainers/features/common-utils:2": {
+      "installZsh": true,
+      "configureZshAsDefaultShell": true,
+      "installOhMyZsh": true
+    },
+    // Docker-in-Docker
+    "ghcr.io/devcontainers/features/docker-in-docker:2": {
+      "dockerDashComposeVersion": "v2"
+    },
+    // Git (최신 버전)
+    "ghcr.io/devcontainers/features/git:1": {},
+    // GitHub CLI
+    "ghcr.io/devcontainers/features/github-cli:1": {},
+    // Gradle
+    "ghcr.io/devcontainers/features/java:1": {
+      "version": "none",
+      "installGradle": "9.8.2",
+      "installMaven": "false"
+    },
+    // Kotlin CLI
+    "ghcr.io/devcontainers-extra/features/kotlin:1": {
+      "version": "latest"
+    }
+  },
+
+  // === VS Code 확장 프로그램 + 설정 ===
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        // --- Kotlin / Java 핵심 ---
+        "fwcd.kotlin",
+        "vscjava.vscode-java-pack",
+        "vscjava.vscode-spring-initializr",
+        "vmware.vscode-spring-boot",
+        "vscjava.vscode-gradle",
+
+        // --- 코드 품질 ---
+        "SonarSource.sonarlint-vscode",
+        "usernamehw.errorlens",
+
+        // --- Git ---
+        "eamodio.gitlens",
+        "mhutchie.git-graph",
+
+        // --- 생산성 ---
+        "EditorConfig.EditorConfig",
+        "redhat.vscode-yaml",
+        "ms-azuretools.vscode-docker",
+
+        // --- 테스트 ---
+        "vscjava.vscode-java-test"
+      ],
+      "settings": {
+        // Java/Kotlin 설정
+        "java.compile.nullAnalysis.mode": "automatic",
+        "java.format.settings.url": "https://raw.githubusercontent.com/google/styleguide/gh-pages/eclipse-java-google-style.xml",
+        "java.saveActions.organizeImports": true,
+
+        // Kotlin 설정
+        "kotlin.languageServer.enabled": true,
+        "kotlin.linting.debounceTime": 500,
+
+        // 에디터 공통
+        "editor.formatOnSave": true,
+        "[kotlin]": {
+          "editor.tabSize": 4,
+          "editor.insertSpaces": true
+        },
+        "[java]": {
+          "editor.tabSize": 4,
+          "editor.insertSpaces": true
+        },
+        "editor.rulers": [120],
+        "files.trimTrailingWhitespace": true,
+        "files.insertFinalNewline": true,
+        "files.trimFinalNewlines": true,
+
+        // 터미널
+        "terminal.integrated.defaultProfile.linux": "zsh",
+
+        // Git
+        "git.autofetch": true,
+
+        // Gradle
+        "gradle.javaDebug.cleanOutput": true
+      }
+    },
+    // JetBrains IDE 지원
+    "jetbrains": {
+      "backend": "IntelliJ"
+    }
+  },
+
+  // === 포트 포워딩 ===
+  "forwardPorts": [8080, 8443, 5432, 6379, 5005],
+  "portsAttributes": {
+    "8080": {
+      "label": "Spring Boot",
+      "onAutoForward": "notify",
+      "protocol": "http"
+    },
+    "8443": {
+      "label": "Spring Boot (HTTPS)",
+      "onAutoForward": "silent",
+      "protocol": "https"
+    },
+    "5432": {
+      "label": "PostgreSQL",
+      "onAutoForward": "silent"
+    },
+    "6379": {
+      "label": "Redis",
+      "onAutoForward": "silent"
+    },
+    "5005": {
+      "label": "JVM Remote Debug",
+      "onAutoForward": "silent"
+    }
+  },
+
+  // === 라이프사이클 명령 ===
+  // 컨테이너 생성 완료 후: Gradle 의존성 다운로드 + ktlint 설치
+  "postCreateCommand": "if [ -f gradlew ]; then chmod +x gradlew && ./gradlew dependencies --no-daemon 2>/dev/null; fi; curl -sSLO https://github.com/pinterest/ktlint/releases/latest/download/ktlint && chmod a+x ktlint && sudo mv ktlint /usr/local/bin/; echo 'Kotlin dev container ready!'",
+
+  // === 환경 변수 ===
+  "containerEnv": {
+    "JAVA_TOOL_OPTIONS": "-XX:+UseZGC -XX:+ZGenerational",
+    "GRADLE_OPTS": "-Dorg.gradle.daemon=false -Dorg.gradle.caching=true",
+    "SPRING_PROFILES_ACTIVE": "local"
+  },
+
+  // === 볼륨 마운트 (캐시 영속화) ===
+  "mounts": [
+    "source=kotlin-gradle-cache,target=/home/vscode/.gradle,type=volume",
+    "source=kotlin-m2-cache,target=/home/vscode/.m2,type=volume"
+  ],
+
+  // === 비루트 사용자 ===
+  "remoteUser": "vscode"
+}

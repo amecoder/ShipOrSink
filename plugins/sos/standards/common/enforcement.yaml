@@ -1,0 +1,40 @@
+# Enforcement claims — every sentence in common/rules/ that says "enforce", and what actually backs it.
+#
+#   test:     the exact name of a bats test in tests/ that proves this repo's templates block it
+#   advisory: the sentence tells the PROJECT to enforce something; nothing shipped here can block it (say why)
+#
+# tests/claims.bats fails when a rule gains an "enforce" sentence that is not listed here, when an entry has
+# both or neither of test/advisory, when a test name does not exist, or when the sentence was removed.
+# This is a document-consistency check, not enforcement itself (roadmap §0.2) — numbers are proven by
+# tests/enforcement.bats against common/quality-thresholds.yaml.
+
+version: 1
+
+claims:
+  - file: common/rules/graphql.md
+    text: "All fields require descriptions (enforce with linter)"
+    advisory: "no GraphQL template ships a schema linter config; the project adds graphql-eslint or similar"
+  - file: common/rules/graphql.md
+    text: "Query complexity limit enforced server-side"
+    advisory: "a server runtime setting of the project's GraphQL server — no template here"
+  - file: common/rules/graphql.md
+    text: "Query depth and complexity limits enforced at gateway"
+    advisory: "a gateway/runtime setting of the project — no template here"
+  - file: common/rules/llmops-promptops.md
+    text: "Output guardrails (toxicity, policy, schema validation) are enforced for user-facing responses."
+    advisory: "application runtime behaviour; the eval harness template (common/templates) checks it per project"
+  - file: common/rules/modular-monolith.md
+    text: "Fitness functions enforce module boundaries (see architecture-fitness rule)."
+    advisory: "review-checklist item for the project; only kotlin-spring ships a boundary test (ArchUnit) — other languages: roadmap stage 3 (A10)"
+  - file: common/rules/multi-tenancy.md
+    text: "Enforce tenant filtering in repositories, query builders, ORM scopes, or row-level security."
+    advisory: "application code / database policy of the project"
+  - file: common/rules/product-analytics.md
+    text: "Each event has a versioned JSON schema enforced at ingestion; bad payloads are rejected or quarantined, not silently dropped."
+    advisory: "the project's ingestion pipeline validates events — no template here"
+  - file: common/rules/rdbms.md
+    text: "Model required business invariants with constraints when the database can enforce them reliably."
+    advisory: "schema design of the project's database"
+  - file: common/rules/scaffolding.md
+    text: "Prefer one package manager per project and enforce it with `packageManager` or documented setup."
+    advisory: "a package.json field the project sets; the TypeScript CI template detects the manager from the lockfile"

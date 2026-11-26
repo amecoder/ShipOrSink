@@ -1,0 +1,174 @@
+# .golangci.yml — golangci-lint v2 configuration
+# Based on big-tech standards (Uber, Google)
+# Docs: https://golangci-lint.run/usage/configuration/
+version: "2"
+
+run:
+  timeout: 5m
+  tests: true
+
+# ── Linters ──────────────────────────────────────────────────────────────────
+linters:
+  enable:
+    # --- Tier 1: Default (always on) ---
+    - errcheck       # unchecked error return values
+    - govet          # go vet — suspicious constructs
+    - staticcheck    # 150+ static analysis rules (gold standard)
+    - unused         # unused constants, variables, functions, types
+    - ineffassign    # unused variable assignments
+
+    # --- Tier 2: Strongly recommended ---
+    - gosec          # security vulnerabilities (OWASP Top 10)
+    - revive         # golint replacement, 60+ rules
+    - gocyclo        # cyclomatic complexity
+    - errorlint      # error wrapping / comparison best practices
+    - gocritic       # opinionated linter with 100+ diagnostics
+    - exhaustive     # enum switch exhaustiveness check
+    - nilerr         # returning nil after checking err != nil
+    - prealloc       # slice preallocation hints
+    - unparam        # unused function parameters
+    - testifylint    # testify best practices
+
+    # --- Tier 3: Recommended (2025-2026 modern Go) ---
+    - modernize      # upgrade to modern Go idioms
+    - bodyclose      # unclosed HTTP response bodies
+    - unconvert      # unnecessary type conversions
+    - misspell       # common English misspellings
+    - errname        # error type naming conventions
+    - copyloopvar    # loop variable copy issues
+    - intrange       # Go 1.22+ integer range iteration
+    - perfsprint     # fmt.Sprintf optimizations
+
+    # --- Tier 4: Code quality ---
+    - funlen         # function length limit
+    - nestif         # nested if depth limit
+    - dupl           # code duplication detection
+
+  # ── Linter Settings ─────────────────────────────────────────────────────────
+  settings:
+    errcheck:
+      check-type-assertions: true
+      check-blank: true
+
+    govet:
+      enable-all: true
+
+    gocyclo:
+      min-complexity: 15
+
+    funlen:
+      lines: 50
+      statements: 40
+
+    nestif:
+      min-complexity: 5
+
+    dupl:
+      threshold: 150
+
+    revive:
+      severity: warning
+      rules:
+        - name: blank-imports
+        - name: context-as-argument
+        - name: context-keys-type
+        - name: dot-imports
+        - name: error-return
+        - name: error-strings
+        - name: error-naming
+        - name: exported
+        - name: if-return
+        - name: increment-decrement
+        - name: var-naming
+        - name: var-declaration
+        - name: range
+        - name: receiver-naming
+        - name: time-naming
+        - name: indent-error-flow
+        - name: errorf
+        - name: empty-block
+        - name: superfluous-else
+        - name: unused-parameter
+        - name: unreachable-code
+        - name: redefines-builtin-id
+        # file length (common/quality-thresholds.yaml file_lines) — physical lines, enforced by tests/enforcement.bats
+        - name: file-length-limit
+          arguments:
+            - max: 800
+              skipComments: false
+              skipBlankLines: false
+
+    gocritic:
+      enabled-tags:
+        - diagnostic
+        - style
+        - performance
+        - opinionated
+
+    exhaustive:
+      default-signifies-exhaustive: true
+
+    gosec:
+      excludes:
+        - G104   # unhandled errors (covered by errcheck)
+
+    testifylint:
+      enable-all: true
+
+  # ── Exclusions (v2: issues.exclude-rules → linters.exclusions.rules) ────────
+  exclusions:
+    # v1 had these on by default; v2 needs them spelled out (same as `golangci-lint migrate`)
+    generated: lax
+    presets:
+      - comments                 # missing doc comments on exported symbols
+      - common-false-positives
+      - legacy
+      - std-error-handling       # e.g. unchecked `defer f.Close()`
+    paths:
+      - third_party$
+      - builtin$
+      - examples$
+    rules:
+      # Test files: relax some rules
+      - path: "_test\\.go"
+        linters:
+          - bodyclose
+          - dupl
+          - errcheck
+          - funlen
+          - gosec
+          - nilerr
+          - unparam
+
+      # Main function can be longer
+      - path: "cmd/"
+        linters:
+          - funlen
+
+      # Generated code
+      - path: ".*\\.gen\\.go"
+        linters:
+          - funlen
+          - dupl
+          - gocritic
+          - gocyclo
+          - revive
+
+# ── Formatters ───────────────────────────────────────────────────────────────
+formatters:
+  exclusions:
+    generated: lax
+    paths:
+      - third_party$
+      - builtin$
+      - examples$
+  enable:
+    - goimports
+    - golines
+  settings:
+    golines:
+      max-len: 120
+
+# ── Issue Filtering ──────────────────────────────────────────────────────────
+issues:
+  max-same-issues: 50

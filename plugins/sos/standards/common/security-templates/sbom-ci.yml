@@ -1,0 +1,287 @@
+# ============================================================================
+# SBOM 생성 + 서명 CI 워크플로우
+# ============================================================================
+# 사용법: 이 파일을 프로젝트의 .github/workflows/ 에 복사하세요.
+#   cp sbom-ci.yml <your-project>/.github/workflows/sbom-ci.yml
+#
+# 기능:
+#   1. Syft로 SBOM 생성 (CycloneDX + SPDX)
+#   2. Trivy로 취약점 스캔 (SBOM 기반)
+#   3. cosign으로 컨테이너 이미지 서명 (keyless)
+#   4. cosign으로 SBOM attestation 첨부
+#   5. 아티팩트 업로드 (SBOM + 서명)
+#
+# 필수 조건:
+#   - GHCR (GitHub Container Registry) 사용
+#   - 워크플로우에 id-token: write 권한 (OIDC keyless signing)
+#   - 이미지가 이미 빌드/푸시된 상태
+#
+# 환경변수 (수정 필요):
+#   - IMAGE_NAME: 컨테이너 이미지 이름
+#   - REGISTRY: 컨테이너 레지스트리 주소
+# ============================================================================
+
+name: SBOM + Sign
+
+on:
+  push:
+    branches: [main]
+    tags: ['v*']
+  # 릴리스 발행 시에도 실행
+  release:
+    types: [published]
+
+# 동일 브랜치/PR에서 중복 실행 방지
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+# 전역 최소 권한 선언
+permissions:
+  contents: read
+
+env:
+  REGISTRY: ghcr.io
+  # 프로젝트에 맞게 수정
+  IMAGE_NAME: ${{ github.repository }}
+
+jobs:
+  # ──────────────────────────────────────────────────────────────────────────
+  # 1단계: 컨테이너 이미지 빌드 및 푸시
+  # ──────────────────────────────────────────────────────────────────────────
+  build:
+    name: Build & Push Image
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    outputs:
+      image-digest: ${{ steps.build.outputs.digest }}
+      image-ref: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}@${{ steps.build.outputs.digest }}
+
+    steps:
+      # 소스 코드 체크아웃
+      - name: Checkout
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          persist-credentials: false
+
+      # Docker Buildx 설정 (멀티 플랫폼 빌드 지원)
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@b5ca514318bd6ebac0fb2aedd5d36ec1b5c232a2 # v3.10.0
+
+      # GHCR 로그인
+      - name: Login to GHCR
+        uses: docker/login-action@74a5d142397b4f367a81961eba4e8cd7edddf772 # v3.4.0
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      # 이미지 메타데이터 추출 (태그, 라벨)
+      - name: Extract metadata
+        id: meta
+        uses: docker/metadata-action@902fa8ec7d6ecbf8d84d538b9b233a880e428804 # v5.7.0
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+          tags: |
+            type=ref,event=branch
+            type=ref,event=tag
+            type=sha,prefix=sha-
+            type=raw,value=latest,enable={{is_default_branch}}
+
+      # Docker 이미지 빌드 + 푸시
+      - name: Build and push
+        id: build
+        uses: docker/build-push-action@14487ce63c7a62a4a324b0bfb37086795e31c6c1 # v6.16.0
+        with:
+          context: .
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          provenance: true
+          sbom: false  # Syft로 별도 생성
+
+  # ──────────────────────────────────────────────────────────────────────────
+  # 2단계: SBOM 생성 + 취약점 스캔
+  # ──────────────────────────────────────────────────────────────────────────
+  sbom:
+    name: Generate SBOM & Scan
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: read
+      security-events: write
+    outputs:
+      sbom-cyclonedx: sbom-cyclonedx.json
+      sbom-spdx: sbom-spdx.json
+
+    steps:
+      # 소스 코드 체크아웃 (라이선스 파일 참조용)
+      - name: Checkout
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          persist-credentials: false
+
+      # GHCR 로그인 (이미지 풀 권한)
+      - name: Login to GHCR
+        uses: docker/login-action@74a5d142397b4f367a81961eba4e8cd7edddf772 # v3.4.0
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      # Syft 설치
+      - name: Install Syft
+        uses: anchore/sbom-action/download-syft@e11c554f704a0b820cbf8c51673f6945e0731532 # v0.18.2
+
+      # CycloneDX SBOM 생성
+      - name: Generate CycloneDX SBOM
+        env:
+          IMAGE_REF: ${{ needs.build.outputs.image-ref }}
+        run: |
+          syft packages "$IMAGE_REF" \
+            -o cyclonedx-json=sbom-cyclonedx.json
+
+      # SPDX SBOM 생성
+      - name: Generate SPDX SBOM
+        env:
+          IMAGE_REF: ${{ needs.build.outputs.image-ref }}
+        run: |
+          syft packages "$IMAGE_REF" \
+            -o spdx-json=sbom-spdx.json
+
+      # Trivy로 SBOM 기반 취약점 스캔
+      - name: Scan SBOM for vulnerabilities
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
+        with:
+          scan-type: sbom
+          input: sbom-cyclonedx.json
+          severity: CRITICAL,HIGH
+          exit-code: 1
+          format: sarif
+          output: trivy-sbom-results.sarif
+
+      # SARIF 결과를 GitHub Security 탭에 업로드
+      - name: Upload Trivy SARIF
+        if: always()
+        uses: github/codeql-action/upload-sarif@faaca9a8f6edddba5725ffe5adefdab6669a2eca # v3.38.0
+        with:
+          sarif_file: trivy-sbom-results.sarif
+          category: sbom-vulnerability-scan
+
+      # SBOM 파일을 아티팩트로 업로드
+      - name: Upload SBOM artifacts
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: sbom-reports
+          path: |
+            sbom-cyclonedx.json
+            sbom-spdx.json
+          retention-days: 90
+
+  # ──────────────────────────────────────────────────────────────────────────
+  # 3단계: 이미지 서명 + SBOM Attestation
+  # ──────────────────────────────────────────────────────────────────────────
+  sign:
+    name: Sign Image & Attest SBOM
+    needs: [build, sbom]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+      id-token: write     # OIDC 토큰 (keyless signing)
+      attestations: write
+
+    steps:
+      # cosign 설치
+      - name: Setup cosign
+        uses: sigstore/cosign-installer@dc72c7d5c4d10cd6bcb8cf6e3fd625a9e5e537da # v3.7.0
+
+      # GHCR 로그인
+      - name: Login to GHCR
+        uses: docker/login-action@74a5d142397b4f367a81961eba4e8cd7edddf772 # v3.4.0
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      # SBOM 아티팩트 다운로드
+      - name: Download SBOM artifacts
+        uses: actions/download-artifact@95815c38cf2ff2164869cbab79da8d1f422bc89e # v4.2.1
+        with:
+          name: sbom-reports
+
+      # 이미지 서명 (keyless — OIDC 기반 Fulcio 인증서)
+      - name: Sign container image (keyless)
+        env:
+          IMAGE_REF: ${{ needs.build.outputs.image-ref }}
+        run: |
+          echo "Signing image: ${IMAGE_REF}"
+          cosign sign --yes "${IMAGE_REF}"
+
+      # SBOM을 attestation으로 첨부 (CycloneDX)
+      - name: Attest SBOM (CycloneDX)
+        env:
+          IMAGE_REF: ${{ needs.build.outputs.image-ref }}
+        run: |
+          echo "Attesting CycloneDX SBOM to: ${IMAGE_REF}"
+          cosign attest --yes \
+            --type cyclonedx \
+            --predicate sbom-cyclonedx.json \
+            "${IMAGE_REF}"
+
+      # 서명 검증 (self-verify)
+      - name: Verify signature
+        env:
+          IMAGE_REF: ${{ needs.build.outputs.image-ref }}
+        run: |
+          echo "Verifying signature for: ${IMAGE_REF}"
+          cosign verify \
+            --certificate-identity-regexp="https://github.com/${GITHUB_REPOSITORY}/.github/workflows/.*" \
+            --certificate-oidc-issuer="https://token.actions.githubusercontent.com" \
+            "${IMAGE_REF}"
+
+      # SBOM attestation 검증
+      - name: Verify SBOM attestation
+        env:
+          IMAGE_REF: ${{ needs.build.outputs.image-ref }}
+        run: |
+          echo "Verifying SBOM attestation for: ${IMAGE_REF}"
+          cosign verify-attestation \
+            --type cyclonedx \
+            --certificate-identity-regexp="https://github.com/${GITHUB_REPOSITORY}/.github/workflows/.*" \
+            --certificate-oidc-issuer="https://token.actions.githubusercontent.com" \
+            "${IMAGE_REF}"
+
+  # ──────────────────────────────────────────────────────────────────────────
+  # 4단계: 릴리스 시 SBOM 첨부
+  # ──────────────────────────────────────────────────────────────────────────
+  release-sbom:
+    name: Attach SBOM to Release
+    if: github.event_name == 'release'
+    needs: [sbom, sign]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      # SBOM 아티팩트 다운로드
+      - name: Download SBOM artifacts
+        uses: actions/download-artifact@95815c38cf2ff2164869cbab79da8d1f422bc89e # v4.2.1
+        with:
+          name: sbom-reports
+
+      # 릴리스에 SBOM 파일 첨부
+      - name: Upload SBOM to release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAG_NAME: ${{ github.event.release.tag_name }}   # pass event data via env as a rule, never inline ${{ }}
+        run: |
+          gh release upload "$TAG_NAME" \
+            sbom-cyclonedx.json \
+            sbom-spdx.json \
+            --repo "$GITHUB_REPOSITORY"

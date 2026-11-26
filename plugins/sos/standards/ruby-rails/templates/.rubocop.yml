@@ -1,0 +1,214 @@
+# .rubocop.yml — Ruby/Rails 코드 품질 + 스타일 검사
+# Based on: rubocop-rails-omakase + Shopify ruby-style-guide
+# Docs: https://docs.rubocop.org/rubocop/
+
+# ── 외부 룰셋 상속 ────────────────────────────────────────────────────────
+inherit_gem:
+  rubocop-rails-omakase: rubocop.yml
+
+plugins:   # RuboCop 1.72+ plugin API (`require:` is deprecated for these extensions)
+  - rubocop-rails
+  - rubocop-performance
+  - rubocop-rspec
+  - rubocop-rake
+  - rubocop-thread_safety
+
+# ── 전역 설정 ─────────────────────────────────────────────────────────────
+AllCops:
+  TargetRubyVersion: 3.3
+  TargetRailsVersion: 7.2
+  NewCops: enable
+  SuggestExtensions: false
+  Exclude:
+    - "bin/**/*"
+    - "db/schema.rb"
+    - "db/migrate/2*.rb"
+    - "node_modules/**/*"
+    - "tmp/**/*"
+    - "log/**/*"
+    - "storage/**/*"
+    - "vendor/**/*"
+    - "config/initializers/devise.rb"
+    - "**/*.gemspec"
+
+# ── Layout ────────────────────────────────────────────────────────────────
+Layout/LineLength:
+  Max: 120
+  AllowedPatterns: ['(\A|\s)#'] # 긴 주석 허용
+
+Layout/MultilineMethodCallIndentation:
+  EnforcedStyle: indented
+
+Layout/EndAlignment:
+  EnforcedStyleAlignWith: variable
+
+# ── Metrics ───────────────────────────────────────────────────────────────
+# rubocop-rails-omakase disables the whole Metrics department ("All cops except your using extensions are
+# disabled by default") — a cop with only `Max:` stays off. Every cop below needs `Enabled: true`
+# (dev-standards tests/enforcement-ruby.bats verifies MethodLength 50 / CyclomaticComplexity 15).
+Metrics/MethodLength:
+  Enabled: true
+  Max: 50  # 함수 50줄 제한 (전사 표준)
+  CountAsOne: ['array', 'heredoc', 'method_call']
+
+Metrics/AbcSize:
+  Enabled: true
+  Max: 30
+
+Metrics/ClassLength:
+  Enabled: true
+  Max: 300
+  Exclude:
+    - "spec/**/*"
+    - "test/**/*"
+
+Metrics/ModuleLength:
+  Enabled: true
+  Max: 300
+
+Metrics/CyclomaticComplexity:
+  Enabled: true
+  Max: 15  # 순환 복잡도 15 (전사 표준)
+
+Metrics/PerceivedComplexity:
+  Enabled: true
+  Max: 15
+
+Metrics/ParameterLists:
+  Enabled: true
+  Max: 5
+  CountKeywordArgs: false
+
+Metrics/BlockLength:
+  Enabled: true
+  Max: 50
+  Exclude:
+    - "config/**/*"
+    - "spec/**/*"
+    - "test/**/*"
+    - "Rakefile"
+    - "*.rake"
+    - "Gemfile"
+    - "*.gemspec"
+
+# ── Style ─────────────────────────────────────────────────────────────────
+Style/Documentation:
+  Enabled: false  # 모든 클래스에 주석 강제는 과함
+
+Style/FrozenStringLiteralComment:
+  Enabled: true
+  EnforcedStyle: always
+
+Style/StringLiterals:
+  EnforcedStyle: double_quotes
+
+Style/StringLiteralsInInterpolation:
+  EnforcedStyle: double_quotes
+
+Style/HashSyntax:
+  EnforcedShorthandSyntax: always
+  EnforcedStyle: ruby19
+
+Style/TrailingCommaInArrayLiteral:
+  EnforcedStyleForMultiline: comma
+
+Style/TrailingCommaInHashLiteral:
+  EnforcedStyleForMultiline: comma
+
+Style/GuardClause:
+  Enabled: true
+
+Style/ClassAndModuleChildren:
+  EnforcedStyle: nested
+
+Style/RaiseArgs:
+  EnforcedStyle: exploded
+
+# ── Naming ────────────────────────────────────────────────────────────────
+Naming/PredicatePrefix:   # renamed from PredicateName (RuboCop 1.76)
+  ForbiddenPrefixes:
+    - is_
+    - has_
+    - have_
+
+Naming/MethodParameterName:
+  MinNameLength: 2
+
+# ── Lint ──────────────────────────────────────────────────────────────────
+Lint/MissingSuper:
+  Exclude:
+    - "app/components/**/*"
+    - "app/jobs/application_job.rb"
+
+Lint/EmptyClass:
+  AllowComments: true
+
+# ── Rails ─────────────────────────────────────────────────────────────────
+Rails/ApplicationController:
+  Enabled: true
+
+Rails/ApplicationRecord:
+  Enabled: true
+
+Rails/Output:
+  Enabled: true  # puts/pp 금지 (Rails.logger 사용)
+
+Rails/SkipsModelValidations:
+  Enabled: true  # update_column, update_all 등 검증 우회 경고
+
+Rails/HasManyOrHasOneDependent:
+  Enabled: true  # dependent 옵션 명시 강제
+
+Rails/InverseOf:
+  Enabled: true  # has_many/belongs_to에 inverse_of 명시
+
+Rails/ReversibleMigration:
+  Enabled: true
+
+Rails/UniqueValidationWithoutIndex:
+  Enabled: true  # uniqueness 검증은 DB 인덱스 필요
+
+Rails/BulkChangeTable:
+  Enabled: true  # 마이그레이션에서 change_table 묶기
+
+# ── Performance ───────────────────────────────────────────────────────────
+Performance/TimesMap:
+  Enabled: true
+
+Performance/StringReplacement:
+  Enabled: true
+
+Performance/RegexpMatch:
+  Enabled: true
+
+Performance/StartWith:
+  Enabled: true
+
+Performance/EndWith:
+  Enabled: true
+
+# ── ThreadSafety ──────────────────────────────────────────────────────────
+ThreadSafety/ClassAndModuleAttributes:
+  Enabled: true
+
+ThreadSafety/ClassInstanceVariable:   # renamed from InstanceVariableInClassMethod (rubocop-thread_safety 0.7)
+  Enabled: true
+
+ThreadSafety/MutableClassInstanceVariable:
+  Enabled: true
+
+# ── RSpec ─────────────────────────────────────────────────────────────────
+RSpec/ExampleLength:
+  Max: 20
+
+RSpec/MultipleExpectations:
+  Max: 5
+
+RSpec/NestedGroups:
+  Max: 4
+
+RSpec/DescribeClass:
+  Exclude:
+    - "spec/system/**/*"
+    - "spec/features/**/*"
+    - "spec/requests/**/*"

@@ -1,0 +1,9 @@
+# tool/quality_metrics has its own analysis options on purpose: without this file the Dart tools walk up to the
+# project's analysis_options.yaml, whose `include: package:very_good_analysis/...` cannot resolve in this
+# package (it does not depend on very_good_analysis) and every `dart format` / `dart analyze` run warns.
+# The Dart defaults apply here; the tool passes `dart analyze --fatal-infos` with them.
+analyzer:
+  language:
+    strict-casts: true
+    strict-inference: true
+    strict-raw-types: true

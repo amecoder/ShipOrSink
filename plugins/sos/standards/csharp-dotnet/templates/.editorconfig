@@ -1,0 +1,150 @@
+root = true
+
+# ── Global defaults ──────────────────────────────────────────────────────────
+[*]
+charset = utf-8
+end_of_line = lf
+trim_trailing_whitespace = true
+insert_final_newline = true
+indent_style = space
+indent_size = 4
+max_line_length = 120
+
+# ── C# / Roslyn ──────────────────────────────────────────────────────────────
+[*.cs]
+indent_style = space
+indent_size = 4
+csharp_new_line_before_open_brace = all
+csharp_new_line_before_else = true
+csharp_new_line_before_catch = true
+csharp_new_line_before_finally = true
+csharp_new_line_before_members_in_object_initializers = true
+
+# var 사용 정책 — 명시적 타입 권장 (Microsoft 가이드)
+csharp_style_var_for_built_in_types = false:warning
+csharp_style_var_when_type_is_apparent = true:suggestion
+csharp_style_var_elsewhere = false:suggestion
+
+# 표현식 본문 멤버 (단순 메서드만)
+csharp_style_expression_bodied_methods = when_on_single_line:silent
+csharp_style_expression_bodied_constructors = false:silent
+csharp_style_expression_bodied_properties = true:suggestion
+
+# 패턴 매칭 선호
+csharp_style_pattern_matching_over_is_with_cast_check = true:warning
+csharp_style_pattern_matching_over_as_with_null_check = true:warning
+
+# Null 체크
+csharp_style_throw_expression = true:suggestion
+csharp_style_conditional_delegate_call = true:warning
+
+# using 정렬
+dotnet_sort_system_directives_first = true
+dotnet_separate_import_directive_groups = false
+
+# Modifier 순서
+csharp_preferred_modifier_order = public,private,protected,internal,static,extern,new,virtual,abstract,sealed,override,readonly,unsafe,volatile,async:warning
+visual_basic_preferred_modifier_order = Partial,Default,Private,Protected,Public,Friend,NotOverridable,Overridable,MustOverride,Overloads,Overrides,MustInherit,NotInheritable,Static,Shared,Shadows,ReadOnly,WriteOnly,Dim,Const,WithEvents,Widening,Narrowing,Custom,Async:silent
+
+# ── 명명 규칙 (Naming) ───────────────────────────────────────────────────────
+# Interface — I 접두사 (PascalCase)
+dotnet_naming_rule.interface_should_be_begins_with_i.severity = warning
+dotnet_naming_rule.interface_should_be_begins_with_i.symbols = interface
+dotnet_naming_rule.interface_should_be_begins_with_i.style = begins_with_i
+dotnet_naming_symbols.interface.applicable_kinds = interface
+dotnet_naming_symbols.interface.applicable_accessibilities = *
+dotnet_naming_style.begins_with_i.required_prefix = I
+dotnet_naming_style.begins_with_i.capitalization = pascal_case
+
+# Type / Method / Property — PascalCase
+dotnet_naming_rule.types_should_be_pascal_case.severity = warning
+dotnet_naming_rule.types_should_be_pascal_case.symbols = types
+dotnet_naming_rule.types_should_be_pascal_case.style = pascal_case
+dotnet_naming_symbols.types.applicable_kinds = class,struct,interface,enum
+dotnet_naming_style.pascal_case.capitalization = pascal_case
+
+# Private field — _camelCase
+dotnet_naming_rule.private_fields_should_be_underscore_camel.severity = warning
+dotnet_naming_rule.private_fields_should_be_underscore_camel.symbols = private_fields
+dotnet_naming_rule.private_fields_should_be_underscore_camel.style = underscore_camel_case
+dotnet_naming_symbols.private_fields.applicable_kinds = field
+dotnet_naming_symbols.private_fields.applicable_accessibilities = private
+dotnet_naming_style.underscore_camel_case.required_prefix = _
+dotnet_naming_style.underscore_camel_case.capitalization = camel_case
+
+# Constants — PascalCase
+dotnet_naming_rule.constants_should_be_pascal_case.severity = warning
+dotnet_naming_rule.constants_should_be_pascal_case.symbols = constants
+dotnet_naming_rule.constants_should_be_pascal_case.style = pascal_case
+dotnet_naming_symbols.constants.applicable_kinds = field
+dotnet_naming_symbols.constants.required_modifiers = const
+
+# ── Roslyn 분석기 규칙 (CA*, S*, SA*) ────────────────────────────────────────
+# CA: Microsoft.CodeAnalysis.NetAnalyzers
+# S:  SonarAnalyzer.CSharp
+# SA: StyleCop.Analyzers
+
+# Performance — error 등급
+dotnet_diagnostic.CA1810.severity = warning  # 정적 생성자에서 정적 필드 초기화
+dotnet_diagnostic.CA1822.severity = warning  # static 가능 메서드
+dotnet_diagnostic.CA1825.severity = warning  # 빈 배열은 Array.Empty<T>()
+
+# Security — error 등급
+dotnet_diagnostic.CA2100.severity = error    # SQL 주입 가능성
+dotnet_diagnostic.CA2300.severity = error    # 안전하지 않은 역직렬화
+dotnet_diagnostic.CA5350.severity = error    # 약한 암호 알고리즘 (DES, MD5)
+dotnet_diagnostic.CA5351.severity = error    # 깨진 암호 알고리즘 (MD5, SHA1)
+dotnet_diagnostic.CA5359.severity = error    # 인증서 검증 비활성화 금지
+dotnet_diagnostic.CA5394.severity = error    # 안전하지 않은 난수 (Random) 금지
+
+# Reliability
+dotnet_diagnostic.CA1063.severity = warning  # IDisposable 구현
+dotnet_diagnostic.CA2007.severity = none     # ConfigureAwait — 라이브러리만, 앱은 끔
+dotnet_diagnostic.CA2016.severity = warning  # CancellationToken 전파
+dotnet_diagnostic.CA2245.severity = warning  # 자기 자신에 할당 금지
+
+# Usage — error 등급
+dotnet_diagnostic.CA1062.severity = warning  # public 메서드 인자 null 검사
+dotnet_diagnostic.CA1707.severity = warning  # 식별자에 underscore 금지 (테스트 제외)
+dotnet_diagnostic.CA1822.severity = warning  # static 가능 메서드
+
+# Globalization
+dotnet_diagnostic.CA1304.severity = warning  # CultureInfo 명시
+dotnet_diagnostic.CA1305.severity = warning  # IFormatProvider 명시
+
+# Nullable 참조 타입 — 강제
+dotnet_diagnostic.CS8600.severity = error    # null 가능성을 null이 아닌 타입에 변환
+dotnet_diagnostic.CS8602.severity = error    # null 역참조 가능성
+dotnet_diagnostic.CS8603.severity = error    # null 반환 가능성
+dotnet_diagnostic.CS8618.severity = error    # 비-null 필드 초기화되지 않음
+
+# StyleCop — 핵심만
+dotnet_diagnostic.SA1200.severity = none     # using 위치 (네임스페이스 안/밖)
+dotnet_diagnostic.SA1633.severity = none     # 파일 헤더 — 프로젝트별 결정
+dotnet_diagnostic.SA1101.severity = none     # this. 접두사 — 강제 안 함
+dotnet_diagnostic.SA1309.severity = none     # _ 접두사 허용 (위 명명 규칙과 일관)
+
+# SonarAnalyzer — 핵심 보안/품질
+dotnet_diagnostic.S1118.severity = warning   # static 클래스 사용
+dotnet_diagnostic.S2068.severity = error     # 하드코딩된 자격 증명
+dotnet_diagnostic.S2092.severity = error     # 안전한 쿠키 플래그
+dotnet_diagnostic.S2245.severity = error     # System.Random 보안 컨텍스트 금지
+dotnet_diagnostic.S3649.severity = error     # SQL 주입
+dotnet_diagnostic.S5042.severity = error     # ZipSlip 취약점
+
+# 복잡도 (SonarAnalyzer)
+# 숫자(15 · 50)는 SonarLint.xml 이 정한다 — 이 파일은 severity 만. warning 은 TreatWarningsAsErrors 로 빌드 오류가 된다
+dotnet_diagnostic.S1541.severity = warning   # 순환 복잡도 (SonarLint.xml maximumFunctionComplexityThreshold)
+dotnet_diagnostic.S138.severity = warning    # 함수 길이 (SonarLint.xml max)
+dotnet_diagnostic.S1200.severity = warning   # 클래스 응집도
+dotnet_diagnostic.S107.severity = warning    # 파라미터 7개 초과 금지
+
+# ── Markdown / YAML / JSON ───────────────────────────────────────────────────
+[*.{md,markdown}]
+trim_trailing_whitespace = false
+
+[*.{yml,yaml,json}]
+indent_size = 2
+
+[*.{csproj,xml,props,targets}]
+indent_size = 2

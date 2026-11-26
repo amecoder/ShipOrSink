@@ -1,0 +1,80 @@
+# ── lint-staged configuration ─────────────────────────────────────────
+# Add this to package.json under "lint-staged" key,
+# or create a separate .lintstagedrc.json file.
+#
+# package.json example:
+# {
+#   "lint-staged": {
+#     "*.{ts,tsx}": ["eslint --fix --no-warn-ignored", "prettier --write"],
+#     "*.{json,md,yml,yaml}": ["prettier --write"],
+#     "*.{css,scss}": ["prettier --write"]
+#   }
+# }
+
+# ── Husky setup ──────────────────────────────────────────────────────
+# Run the following commands to initialize Husky in your project:
+#
+#   npm install -D husky lint-staged
+#   npx husky init
+#
+# Then set the pre-commit hook:
+#
+#   echo "npx lint-staged" > .husky/pre-commit
+#
+# Optionally add a pre-push hook for type checking and tests:
+#
+#   echo "npm run typecheck && npm run test" > .husky/pre-push
+#
+# ── package.json scripts ─────────────────────────────────────────────
+# Add these scripts to your package.json:
+#
+# {
+#   "scripts": {
+#     "prepare": "husky",
+#     "lint": "eslint .",
+#     "lint:fix": "eslint . --fix",
+#     "format": "prettier --write .",
+#     "format:check": "prettier --check .",
+#     "typecheck": "tsc --noEmit",
+#     "test": "vitest run",
+#     "test:watch": "vitest",
+#     "test:coverage": "vitest run --coverage"
+#   }
+# }
+
+# ── .lintstagedrc.json (alternative to package.json) ────────────────
+# {
+#   "*.{ts,tsx}": ["eslint --fix --no-warn-ignored", "prettier --write"],
+#   "*.{json,md,yml,yaml}": ["prettier --write"],
+#   "*.{css,scss}": ["prettier --write"]
+# }
+
+# ── detect-secrets (pre-commit secret scanning) ──────────────────────
+# Install detect-secrets:
+#   pip install detect-secrets
+#   detect-secrets scan > .secrets.baseline
+#
+# Add to .husky/pre-commit (BEFORE lint-staged):
+#
+#   detect-secrets-hook --baseline .secrets.baseline $(git diff --cached --name-only)
+#   npx lint-staged
+#
+# Or if using npx wrapper (no Python dependency):
+#   npx --yes @anthropic/detect-secrets-hook --baseline .secrets.baseline
+#
+# Full .husky/pre-commit example:
+#
+#   #!/usr/bin/env sh
+#   # Secret scanning -- runs before lint-staged to fail fast
+#   detect-secrets-hook --baseline .secrets.baseline \
+#     $(git diff --cached --name-only) || {
+#       echo "ERROR: Potential secrets detected. Run 'detect-secrets audit .secrets.baseline' to review."
+#       exit 1
+#     }
+#   # Lint & format staged files
+#   npx lint-staged
+
+# ── NOTE ─────────────────────────────────────────────────────────────
+# Do NOT run "tsc --noEmit" in lint-staged.
+# Type checking staged files only causes TS17004 errors
+# because tsconfig.json is ignored. Run typecheck in pre-push instead.

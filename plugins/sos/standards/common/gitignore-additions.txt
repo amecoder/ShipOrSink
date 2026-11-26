@@ -1,0 +1,66 @@
+# ── dev-standards 공통 .gitignore 추가 패턴 ──────────────────────────────────
+
+# Python
+__pycache__/
+*.py[cod]
+*.so
+.venv/
+venv/
+.env
+.env.*
+!.env.example
+*.egg-info/
+dist/
+build/
+.mypy_cache/
+.ruff_cache/
+.pytest_cache/
+htmlcov/
+.coverage
+coverage.xml
+
+# JavaScript / TypeScript · 테스트 산출물 (커밋되지 않은 산출물은 테스트 영수증 트리를 흔든다)
+node_modules/
+coverage/
+.nyc_output/
+test-results/
+playwright-report/
+.next/
+
+# 데이터베이스
+*.db
+*.sqlite
+*.sqlite3
+
+# 시크릿
+.secrets.baseline
+*.pem
+*.key
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Docker
+.env.docker
+
+# Kotlin / Java / Spring Boot
+*.class
+*.jar
+*.war
+*.ear
+target/
+.gradle/
+build/
+out/
+*.iml
+.kotlin/
+
+# Claude Code 개인 설정 (팀 설정은 .claude/settings.json 으로 커밋한다). 테스트 영수증은 .git/claude/ 안에 있어 무시 불필요
+.claude/settings.local.json

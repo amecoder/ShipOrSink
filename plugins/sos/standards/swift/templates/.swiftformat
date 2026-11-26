@@ -1,0 +1,151 @@
+# .swiftformat — SwiftFormat configuration
+# Consistent with Apple coding guidelines and SwiftLint rules
+
+# ── Formatting options ───────────────────────────────────────────────────────
+
+# Indentation: 4 spaces (Apple standard)
+--indent 4
+--indentcase false
+--ifdef indent
+--xcodeindentation disabled
+
+# Line wrapping
+--maxwidth 120
+--wraparguments beforefirst
+--wrapparameters beforefirst
+--wrapcollections beforefirst
+--wrapconditions afterfirst
+--wrapreturntype preserve
+--wraptypealiases beforefirst
+--wrapternary default
+--closingparen balanced
+
+# Braces
+--allman false
+--elseposition same-line
+--guardelse next-line
+
+# Spacing
+--operatorfunc spaced
+--nospaceoperators
+--ranges spaced
+--trimwhitespace always
+--commas always
+--decimalgrouping 3,5
+--binarygrouping 4,8
+--octalgrouping 4,8
+--hexgrouping 4,8
+--fractiongrouping disabled
+--exponentgrouping disabled
+--hexliteralcase uppercase
+
+# Redundancy removal
+--self remove
+--selfrequired
+--redundanttype inferred
+--importgrouping testable-bottom
+--stripunusedargs closure-only
+
+# Void
+--voidtype void
+--empty void
+
+# Semicolons
+--semicolons never
+
+# Trailing comma
+--commas always
+
+# Header
+--header strip
+
+# Marks
+--marktypes always
+--markextensions always
+--typemark "MARK: - %t"
+--extensionmark "MARK: - %t + %c"
+--groupedextension "MARK: %c"
+
+# Lifecycle
+--lifecycle
+
+# Acronyms
+--acronyms ID,URL,UUID,HTTP,HTTPS,API,JSON,XML,HTML,CSS,SQL,UI,RGB,FTP,DNS,TCP,UDP,IP
+
+# Swift version
+--swiftversion 5.9
+
+# ── Enabled rules ────────────────────────────────────────────────────────────
+--enable blankLinesBetweenImports
+--enable blankLinesBetweenScopes
+--enable blankLinesAtStartOfScope
+--enable blankLinesAtEndOfScope
+--enable blankLinesAroundMark
+--enable consecutiveBlankLines
+--enable consecutiveSpaces
+--enable duplicateImports
+--enable elseOnSameLine
+--enable emptyBraces
+--enable hoistPatternLet
+--enable initCoderUnavailable
+--enable isEmpty
+--enable leadingDelimiters
+--enable linebreakAtEndOfFile
+--enable linebreaks
+--enable modifierOrder
+--enable numberFormatting
+--enable preferKeyPath
+--enable redundantBackticks
+--enable redundantBreak
+--enable redundantClosure
+--enable redundantExtensionACL
+--enable redundantFileprivate
+--enable redundantGet
+--enable redundantInit
+--enable redundantLet
+--enable redundantLetError
+--enable redundantNilInit
+--enable redundantObjc
+--enable redundantOptionalBinding
+--enable redundantParens
+--enable redundantPattern
+--enable redundantRawValues
+--enable redundantReturn
+--enable redundantSelf
+--enable redundantType
+--enable redundantVoidReturnType
+--enable semicolons
+--enable sortDeclarations
+--enable sortImports
+--enable spaceAroundBraces
+--enable spaceAroundBrackets
+--enable spaceAroundComments
+--enable spaceAroundGenerics
+--enable spaceAroundOperators
+--enable spaceAroundParens
+--enable spaceInsideBraces
+--enable spaceInsideBrackets
+--enable spaceInsideComments
+--enable spaceInsideGenerics
+--enable spaceInsideParens
+--enable strongOutlets
+--enable strongifiedSelf
+--enable todos
+--enable trailingClosures
+--enable trailingCommas
+--enable trailingSpace
+--enable typeSugar
+--enable unusedArguments
+--enable void
+--enable wrap
+--enable wrapArguments
+--enable wrapAttributes
+--enable wrapMultilineStatementBraces
+--enable yodaConditions
+
+# ── Disabled rules ───────────────────────────────────────────────────────────
+--disable sortSwitchCases
+--disable wrapSwitchCases
+
+# ── Excluded paths ───────────────────────────────────────────────────────────
+--exclude Pods,Carthage,.build,Build,DerivedData,**/*.generated.swift,**/*.pb.swift

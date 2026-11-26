@@ -1,0 +1,108 @@
+# ──────────────────────────────────────────────────────────────────────────────
+# dev-standards: Python 코드 품질 설정
+# 사용법: 이 파일 내용을 프로젝트의 pyproject.toml 하단에 추가하거나
+#         bootstrap.sh 가 자동으로 병합합니다.
+# ──────────────────────────────────────────────────────────────────────────────
+
+[tool.ruff]
+target-version = "py311"    # 프로젝트 Python 버전에 맞게 수정
+src = ["src", "tests"]      # 소스 루트 (isort 기준)
+line-length = 99
+
+[tool.ruff.lint]
+select = [
+    "E", "F", "W",   # pycodestyle + pyflakes (기본)
+    "I",              # isort
+    "N",              # pep8-naming
+    "UP",             # pyupgrade
+    "B",              # flake8-bugbear
+    "A",              # flake8-builtins
+    "SIM",            # flake8-simplify
+    "TCH",            # flake8-type-checking (TYPE_CHECKING 블록)
+    "PT",             # flake8-pytest-style
+    "PERF",           # perflint (성능 패턴)
+    "RUF",            # Ruff 전용 규칙
+    "S",              # bandit (보안)
+    "C90",            # mccabe 복잡도
+    "PL",             # pylint
+]
+ignore = [
+    "B008",           # FastAPI: Depends() in function defaults (의도적)
+    "S101",           # assert 허용 (pytest)
+    "S105",           # "bearer" 등 비밀번호 오탐 방지
+    "S603",           # subprocess call without shell=True
+    "S607",           # partial executable path
+    "PLC0415",        # 의도적 지연 import (조건 분기, EngineMode 등)
+    "PLR2004",        # magic-value: 점진적 상수화 (제거 목표)
+    "PLR0913",        # too-many-arguments: Depends() 리팩터 후 제거
+    "PLR0911",        # too-many-return-statements
+    "PLR0912",        # too-many-branches
+    "PLR0915",        # too-many-statements
+    "RUF100",         # unused noqa directives: per-file 관리
+]
+
+[tool.ruff.lint.mccabe]
+max-complexity = 15   # 경고 수준 (이상적 목표: 10)
+
+[tool.ruff.lint.per-file-ignores]
+# 테스트: 보안/매직넘버/미사용변수 허용
+"tests/**/*.py" = [
+    "S101",      # assert
+    "S106",      # hardcoded password in function args
+    "S107",      # hardcoded password default value
+    "S108",      # /tmp 사용
+    "PLR2004",   # 매직 넘버 (assert value == 42)
+    "PLR0124",   # 자기 자신과 비교 (d1 <= d1, 의도적 테스트)
+    "PLR0913",   # 픽스처 인자 많아도 허용
+    "RUF059",    # 미사용 언패킹 변수 (_conf 대신 conf)
+    "PERF401",   # 중첩 조건 루프의 append (복잡한 테스트 로직)
+]
+# SQL 쿼리 인라인 포함 Repository 파일
+"src/**/repository.py" = ["S608"]
+# 파서/분류기: 복잡도 불가피한 파일들
+"src/**/evaluator.py"         = ["C901", "PLR0912", "PLR0915", "PLR0911"]
+"src/**/intent_classifier.py" = ["C901", "PLR0912"]
+# ↑ 프로젝트에 맞게 추가/제거하세요
+
+[tool.mypy]
+python_version = "3.11"   # 프로젝트 Python 버전에 맞게 수정
+strict = true
+warn_return_any = true
+warn_unused_configs = true
+mypy_path = "src"          # 소스 루트 (없으면 삭제)
+
+# 서드파티 라이브러리 stubs 없는 경우 추가
+[[tool.mypy.overrides]]
+module = ["lxml.*", "xmlschema.*"]
+ignore_missing_imports = true
+
+# ── import-linter: 계층 경계 (Onion = Hexagonal/Clean) ────────────────────────
+# 패키지 구조 (root_package 아래):
+#   domain          도메인 — 다른 계층도, 웹·ORM 프레임워크도 import 하지 않는다
+#   application     유스케이스 — domain 만 쓴다 (어댑터가 구현할 포트 인터페이스도 여기에)
+#   adapter.<이름>  어댑터 (web · persistence …) — 서로 import 하지 않는다
+# 의존은 바깥(adapter)에서 안쪽(domain)으로만 향한다. 실행: PYTHONPATH=src lint-imports
+#   (CI: common/ci-templates/ci-python.yml lint 잡 "Import contracts (import-linter)")
+# 계층 패키지가 하나라도 없으면 실패한다(이름 오타를 잡기 위해). 쓰지 않는 계층은 "(application)" 처럼 괄호로 감싼다.
+# "app" 은 아래 네 곳 모두 프로젝트 최상위 패키지 이름으로 바꾼다.
+[tool.importlinter]
+root_package = "app"                 # ← 프로젝트 최상위 패키지 (src/app)
+include_external_packages = true     # 금지 계약이 fastapi 같은 외부 패키지 import 를 보게 한다
+
+[[tool.importlinter.contracts]]
+name = "Onion layers: adapter -> application -> domain"
+type = "layers"
+containers = ["app"]
+layers = ["adapter", "application", "domain"]
+
+[[tool.importlinter.contracts]]
+name = "Adapters do not import each other"
+type = "independence"
+modules = ["app.adapter.*"]
+
+[[tool.importlinter.contracts]]
+name = "Domain has no framework imports"
+type = "forbidden"
+source_modules = ["app.domain"]
+# 웹·ORM 프레임워크 — 프로젝트가 쓰는 것에 맞게 추가한다
+forbidden_modules = ["fastapi", "starlette", "flask", "django", "sqlalchemy", "sqlmodel"]

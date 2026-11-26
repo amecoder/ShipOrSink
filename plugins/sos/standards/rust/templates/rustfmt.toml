@@ -1,0 +1,49 @@
+# rustfmt.toml — Rust formatter configuration
+# Reference: https://rust-lang.github.io/rustfmt/
+
+# Edition — determines which Rust edition syntax is used for parsing
+edition = "2024"
+# Style edition — controls formatting behavior
+style_edition = "2024"
+
+# ── Line width ────────────────────────────────────────────────────────────────
+max_width = 100
+comment_width = 100
+chain_width = 60
+
+# ── Indentation ───────────────────────────────────────────────────────────────
+hard_tabs = false
+tab_spaces = 4
+
+# ── Newlines ──────────────────────────────────────────────────────────────────
+newline_style = "Auto"
+
+# ── Imports ───────────────────────────────────────────────────────────────────
+# Merge imports at the crate level: use std::{io, fs};
+imports_granularity = "Crate"
+# Group: std → external crates → crate-local
+group_imports = "StdExternalCrate"
+reorder_imports = true
+reorder_modules = true
+
+# ── Functions ─────────────────────────────────────────────────────────────────
+# Tall: each param on its own line when signature exceeds max_width
+fn_params_layout = "Tall"
+
+# ── Syntactic sugar ───────────────────────────────────────────────────────────
+# Use field init shorthand: Point { x, y } instead of Point { x: x, y: y }
+use_field_init_shorthand = true
+# Use ? operator instead of try! macro
+use_try_shorthand = true
+
+# ── Doc comments ──────────────────────────────────────────────────────────────
+# Format code blocks inside doc comments
+format_code_in_doc_comments = true
+# Normalize doc attributes to /// and //!
+normalize_doc_attributes = true
+
+# ── Misc ──────────────────────────────────────────────────────────────────────
+# Format string literals that are longer than max_width
+format_strings = false
+# Force multiline closures and match arms to use a block
+force_multiline_blocks = false

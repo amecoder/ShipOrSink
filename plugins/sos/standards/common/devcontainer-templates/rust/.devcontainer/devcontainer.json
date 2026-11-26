@@ -1,0 +1,145 @@
+{
+  // ============================================================================
+  // Rust DevContainer 템플릿
+  // ============================================================================
+  // 사용법: 이 디렉토리(.devcontainer/)를 프로젝트 루트에 복사하세요.
+  //   cp -r common/devcontainer-templates/rust/.devcontainer /path/to/project/
+  //
+  // 베이스: Rust 최신 stable 1.x + Debian Bookworm
+  // 포함: clippy, rustfmt, cargo-audit, cargo-deny, cargo-tarpaulin
+  // ============================================================================
+
+  "name": "Rust Dev",
+
+  // Microsoft 공식 Rust DevContainer 이미지
+  "image": "mcr.microsoft.com/devcontainers/rust:2-1-bookworm",
+
+  // === Features (추가 도구 설치) ===
+  "features": {
+    // 공통 유틸리티 (zsh, Oh My Zsh)
+    "ghcr.io/devcontainers/features/common-utils:2": {
+      "installZsh": true,
+      "configureZshAsDefaultShell": true,
+      "installOhMyZsh": true
+    },
+    // Docker-in-Docker
+    "ghcr.io/devcontainers/features/docker-in-docker:2": {
+      "dockerDashComposeVersion": "v2"
+    },
+    // Git (최신 버전)
+    "ghcr.io/devcontainers/features/git:1": {},
+    // GitHub CLI
+    "ghcr.io/devcontainers/features/github-cli:1": {}
+  },
+
+  // === VS Code 확장 프로그램 + 설정 ===
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        // --- Rust 핵심 ---
+        "rust-lang.rust-analyzer",
+        "vadimcn.vscode-lldb",
+        "tamasfe.even-better-toml",
+
+        // --- 코드 품질 ---
+        "SonarSource.sonarlint-vscode",
+        "usernamehw.errorlens",
+
+        // --- Git ---
+        "eamodio.gitlens",
+        "mhutchie.git-graph",
+
+        // --- 생산성 ---
+        "EditorConfig.EditorConfig",
+        "redhat.vscode-yaml",
+        "ms-azuretools.vscode-docker",
+        "serayuzgur.crates",
+        "fill-labs.dependi"
+      ],
+      "settings": {
+        // rust-analyzer 설정
+        "rust-analyzer.check.command": "clippy",
+        "rust-analyzer.check.extraArgs": [
+          "--",
+          "-W", "clippy::pedantic",
+          "-W", "clippy::nursery",
+          "-A", "clippy::module_name_repetitions"
+        ],
+        "rust-analyzer.inlayHints.chainingHints.enable": true,
+        "rust-analyzer.inlayHints.typeHints.enable": true,
+        "rust-analyzer.inlayHints.parameterHints.enable": true,
+        "rust-analyzer.imports.granularity.group": "module",
+        "rust-analyzer.imports.prefix": "self",
+        "rust-analyzer.cargo.features": "all",
+        "rust-analyzer.procMacro.enable": true,
+
+        // 포매터
+        "[rust]": {
+          "editor.defaultFormatter": "rust-lang.rust-analyzer",
+          "editor.formatOnSave": true
+        },
+
+        // 에디터 공통
+        "editor.rulers": [100],
+        "editor.tabSize": 4,
+        "files.trimTrailingWhitespace": true,
+        "files.insertFinalNewline": true,
+        "files.trimFinalNewlines": true,
+
+        // 터미널
+        "terminal.integrated.defaultProfile.linux": "zsh",
+
+        // Git
+        "git.autofetch": true,
+
+        // LLDB 디버거
+        "lldb.showDisassembly": "auto",
+        "lldb.dereferencePointers": true
+      }
+    }
+  },
+
+  // === 포트 포워딩 ===
+  "forwardPorts": [8080, 3000, 5432, 6379],
+  "portsAttributes": {
+    "8080": {
+      "label": "Actix / Axum Server",
+      "onAutoForward": "notify",
+      "protocol": "http"
+    },
+    "3000": {
+      "label": "Alternative HTTP",
+      "onAutoForward": "silent",
+      "protocol": "http"
+    },
+    "5432": {
+      "label": "PostgreSQL",
+      "onAutoForward": "silent"
+    },
+    "6379": {
+      "label": "Redis",
+      "onAutoForward": "silent"
+    }
+  },
+
+  // === 라이프사이클 명령 ===
+  // 컨테이너 생성 완료 후: Rust 컴포넌트 추가 + cargo 도구 설치
+  "postCreateCommand": "rustup component add clippy rustfmt && cargo install cargo-audit cargo-deny cargo-tarpaulin cargo-nextest cargo-watch 2>/dev/null; cargo fetch 2>/dev/null; echo 'Rust dev container ready!'",
+
+  // === 환경 변수 ===
+  "containerEnv": {
+    "CARGO_TERM_COLOR": "always",
+    "RUST_BACKTRACE": "1",
+    "RUSTFLAGS": "-D warnings"
+  },
+
+  // === 볼륨 마운트 (캐시 영속화) ===
+  "mounts": [
+    "source=rust-cargo-registry,target=/home/vscode/.cargo/registry,type=volume",
+    "source=rust-cargo-git,target=/home/vscode/.cargo/git,type=volume",
+    "source=rust-target,target=/workspace/target,type=volume"
+  ],
+
+  // === 비루트 사용자 ===
+  "remoteUser": "vscode"
+}

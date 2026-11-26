@@ -1,0 +1,12 @@
+{
+  "name": "shiporsink",
+  "description": "Ship Or Sink — 기획부터 PR 까지 단계별 개발 스킬과 테스트 잠금 가드",
+  "owner": { "name": "amecoder" },
+  "plugins": [
+    {
+      "name": "sos",
+      "source": "./plugins/sos",
+      "description": "setup·spec·tc·build·done·regress·ship·ci 단계 스킬과 cycle 길잡이. 완료는 done.sh 종료 코드로, 테스트 변경은 사람이 승인한 ledger 로만"
+    }
+  ]
+}

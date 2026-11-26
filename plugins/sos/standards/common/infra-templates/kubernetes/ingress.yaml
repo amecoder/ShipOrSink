@@ -1,0 +1,118 @@
+# =============================================================================
+# Kubernetes Ingress 매니페스트 (TLS + 호스트 기반 라우팅)
+# =============================================================================
+# 사용법: 플레이스홀더를 실제 값으로 치환하세요.
+#   sed -e 's/APP_NAME/myapp/g' -e 's/NAMESPACE/platform-prod/g' \
+#       -e 's/DOMAIN/myapp.example.com/g' ingress.yaml
+#
+# 사전 요구사항:
+#   - Ingress Controller 설치 (nginx-ingress, traefik, kong 등)
+#   - cert-manager 설치 (TLS 인증서 자동 발급)
+#   - DNS A/CNAME 레코드 설정
+# =============================================================================
+
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: APP_NAME                        # Ingress 리소스 이름
+  namespace: NAMESPACE                  # 네임스페이스
+  labels:
+    app: APP_NAME
+    environment: ENVIRONMENT
+    team: TEAM_NAME
+  annotations:
+    # --- Ingress Controller 설정 ---
+    # nginx ingress controller (기본)
+    kubernetes.io/ingress.class: nginx
+    # 또는 IngressClass 리소스 사용 시: spec.ingressClassName 참조
+
+    # --- TLS 설정 ---
+    # cert-manager 자동 인증서 발급 (Let's Encrypt)
+    cert-manager.io/cluster-issuer: letsencrypt-prod   # ClusterIssuer 이름
+
+    # --- 보안 헤더 ---
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"                 # HTTP → HTTPS 강제 리다이렉트
+    nginx.ingress.kubernetes.io/force-ssl-redirect: "true"           # SSL 강제
+    nginx.ingress.kubernetes.io/configuration-snippet: |
+      # HSTS (Strict Transport Security)
+      more_set_headers "Strict-Transport-Security: max-age=31536000; includeSubDomains; preload";
+      # XSS 방지
+      more_set_headers "X-Content-Type-Options: nosniff";
+      more_set_headers "X-Frame-Options: DENY";
+      more_set_headers "X-XSS-Protection: 1; mode=block";
+      # Referrer 정책
+      more_set_headers "Referrer-Policy: strict-origin-when-cross-origin";
+
+    # --- 성능 설정 ---
+    nginx.ingress.kubernetes.io/proxy-body-size: "10m"               # 요청 본문 크기 제한
+    nginx.ingress.kubernetes.io/proxy-connect-timeout: "10"          # 업스트림 연결 타임아웃(초)
+    nginx.ingress.kubernetes.io/proxy-send-timeout: "60"             # 업스트림 전송 타임아웃(초)
+    nginx.ingress.kubernetes.io/proxy-read-timeout: "60"             # 업스트림 읽기 타임아웃(초)
+
+    # --- Rate Limiting (선택) ---
+    # nginx.ingress.kubernetes.io/limit-rps: "50"                    # 초당 요청 제한
+    # nginx.ingress.kubernetes.io/limit-burst-multiplier: "5"        # 버스트 허용 배수
+
+    # --- CORS 설정 (API 서버인 경우, 선택) ---
+    # nginx.ingress.kubernetes.io/enable-cors: "true"
+    # nginx.ingress.kubernetes.io/cors-allow-origin: "https://frontend.example.com"
+    # nginx.ingress.kubernetes.io/cors-allow-methods: "GET, POST, PUT, DELETE, OPTIONS"
+    # nginx.ingress.kubernetes.io/cors-allow-headers: "Authorization, Content-Type"
+
+spec:
+  # IngressClass (nginx ingress controller 사용)
+  ingressClassName: nginx
+
+  # --- TLS 설정 (HTTPS 인증서) ---
+  tls:
+    - hosts:
+        - DOMAIN                        # 도메인 (예: myapp.example.com)
+      secretName: APP_NAME-tls          # TLS Secret 이름 (cert-manager가 자동 생성)
+
+  # --- 라우팅 규칙 ---
+  rules:
+    # 기본 도메인 라우팅
+    - host: DOMAIN                      # 호스트 기반 라우팅 (예: myapp.example.com)
+      http:
+        paths:
+          # API 경로 → API 서비스
+          - path: /api                  # 경로 접두사
+            pathType: Prefix            # Prefix: 경로 시작 부분 매칭
+            backend:
+              service:
+                name: APP_NAME          # 대상 서비스 이름 (service.yaml과 동일)
+                port:
+                  number: 80            # 서비스 포트 (service.yaml의 spec.ports[].port)
+
+          # 루트 경로 → 프론트엔드 서비스 (SPA인 경우)
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: APP_NAME          # 프론트엔드 서비스 이름으로 변경
+                port:
+                  number: 80
+
+    # 서브도메인 라우팅 (필요 시 주석 해제)
+    # - host: api.DOMAIN                # API 전용 서브도메인 (예: api.myapp.example.com)
+    #   http:
+    #     paths:
+    #       - path: /
+    #         pathType: Prefix
+    #         backend:
+    #           service:
+    #             name: APP_NAME-api
+    #             port:
+    #               number: 80
+
+    # 관리자 도메인 (필요 시 주석 해제)
+    # - host: admin.DOMAIN
+    #   http:
+    #     paths:
+    #       - path: /
+    #         pathType: Prefix
+    #         backend:
+    #           service:
+    #             name: APP_NAME-admin
+    #             port:
+    #               number: 80

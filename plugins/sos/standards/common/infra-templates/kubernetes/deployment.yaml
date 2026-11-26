@@ -1,0 +1,160 @@
+# =============================================================================
+# Kubernetes Deployment 매니페스트
+# =============================================================================
+# 사용법: 플레이스홀더(APP_NAME, NAMESPACE 등)를 실제 값으로 치환하세요.
+#   sed -e 's/APP_NAME/myapp/g' -e 's/NAMESPACE/platform-prod/g' \
+#       -e 's|IMAGE|registry.example.com/myapp:v1.0.0|g' deployment.yaml
+#
+# dev-standards K8s Rules 준수:
+#   - 라벨: app, version, environment, team
+#   - resource requests + limits 필수
+#   - liveness/readiness probe 필수
+#   - securityContext: runAsNonRoot, readOnlyRootFilesystem, allowPrivilegeEscalation=false
+#   - 이미지 태그: latest 금지 (semver 또는 SHA 사용)
+# =============================================================================
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: APP_NAME                        # 애플리케이션 이름 (예: myapp-api)
+  namespace: NAMESPACE                  # 네임스페이스 (예: platform-prod)
+  labels:
+    # dev-standards 필수 라벨 4종
+    app: APP_NAME                       # 애플리케이션 식별자
+    version: APP_VERSION                # 버전 (예: v1.0.0)
+    environment: ENVIRONMENT            # 환경 (dev, staging, production)
+    team: TEAM_NAME                     # 소유 팀 (예: platform)
+spec:
+  replicas: REPLICAS                    # 원하는 Pod 수 (예: 2) — HPA 사용 시 HPA가 관리
+  revisionHistoryLimit: 5               # 롤백용 히스토리 보관 수
+  selector:
+    matchLabels:
+      app: APP_NAME
+  strategy:
+    type: RollingUpdate                 # 무중단 배포 전략
+    rollingUpdate:
+      maxSurge: 25%                     # 배포 중 추가 허용 Pod 비율
+      maxUnavailable: 0                 # 배포 중 최소 가용 Pod 보장 (무중단)
+  template:
+    metadata:
+      labels:
+        app: APP_NAME
+        version: APP_VERSION
+        environment: ENVIRONMENT
+        team: TEAM_NAME
+      annotations:
+        # Prometheus 메트릭 수집 설정 (선택)
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "CONTAINER_PORT"
+        prometheus.io/path: "/metrics"
+    spec:
+      serviceAccountName: APP_NAME      # 최소 권한 ServiceAccount 사용
+      terminationGracePeriodSeconds: 30  # 종료 유예 시간(초)
+
+      # --- Pod 보안 설정 ---
+      securityContext:
+        runAsNonRoot: true              # root 실행 금지
+        runAsUser: 1000                 # non-root UID
+        runAsGroup: 1000                # non-root GID
+        fsGroup: 1000                   # 볼륨 파일 그룹
+
+      containers:
+        - name: APP_NAME
+          image: IMAGE                  # 이미지 URI (latest 태그 금지!)
+          imagePullPolicy: IfNotPresent # Always: 항상 pull, IfNotPresent: 캐시 사용
+
+          # --- 컨테이너 보안 설정 ---
+          securityContext:
+            allowPrivilegeEscalation: false   # 권한 상승 금지
+            readOnlyRootFilesystem: true      # 루트 파일시스템 읽기 전용
+            capabilities:
+              drop: ["ALL"]                   # 모든 Linux capability 제거
+
+          # --- 포트 설정 ---
+          ports:
+            - name: http
+              containerPort: CONTAINER_PORT   # 컨테이너 포트 (예: 8080)
+              protocol: TCP
+
+          # --- 환경 변수 ---
+          env:
+            - name: APP_ENV
+              value: ENVIRONMENT
+            - name: PORT
+              value: "CONTAINER_PORT"
+            # Secret에서 주입 (Plain Secret 금지 — SealedSecrets/ExternalSecrets 사용)
+            - name: DATABASE_URL
+              valueFrom:
+                secretKeyRef:
+                  name: APP_NAME-secrets
+                  key: database-url
+          envFrom:
+            - configMapRef:
+                name: APP_NAME-config   # ConfigMap에서 환경 변수 일괄 로드
+
+          # --- 리소스 제한 (필수) ---
+          resources:
+            requests:                   # 최소 보장 리소스
+              cpu: CPU_REQUEST          # 예: 100m (0.1 vCPU)
+              memory: MEMORY_REQUEST    # 예: 128Mi
+            limits:                     # 최대 허용 리소스
+              cpu: CPU_LIMIT            # 예: 500m (0.5 vCPU)
+              memory: MEMORY_LIMIT      # 예: 512Mi
+
+          # --- Liveness Probe (생존 확인 — 실패 시 Pod 재시작) ---
+          livenessProbe:
+            httpGet:
+              path: /health             # 헬스체크 엔드포인트
+              port: http
+            initialDelaySeconds: 30     # 컨테이너 시작 후 대기 시간
+            periodSeconds: 10           # 검사 주기
+            timeoutSeconds: 5           # 응답 대기 시간
+            failureThreshold: 3         # 연속 실패 허용 횟수
+
+          # --- Readiness Probe (준비 확인 — 실패 시 트래픽 중단) ---
+          readinessProbe:
+            httpGet:
+              path: /ready              # 준비 상태 엔드포인트
+              port: http
+            initialDelaySeconds: 5      # 빠른 준비 확인
+            periodSeconds: 5
+            timeoutSeconds: 3
+            failureThreshold: 3
+
+          # --- Startup Probe (시작 확인 — 느린 시작 앱용, 선택) ---
+          startupProbe:
+            httpGet:
+              path: /health
+              port: http
+            failureThreshold: 30        # 30 * 10s = 최대 5분까지 대기
+            periodSeconds: 10
+
+          # --- 볼륨 마운트 (readOnlyRootFilesystem 사용 시 필수) ---
+          volumeMounts:
+            - name: tmp                 # 임시 파일용
+              mountPath: /tmp
+            - name: app-logs            # 애플리케이션 로그용
+              mountPath: /app/logs
+
+          # --- Graceful Shutdown (종료 전 트래픽 배출) ---
+          lifecycle:
+            preStop:
+              exec:
+                command: ["sh", "-c", "sleep 5"]   # LB 연결 해제 대기
+
+      volumes:
+        - name: tmp
+          emptyDir: {}                  # 임시 볼륨 (Pod 종료 시 삭제)
+        - name: app-logs
+          emptyDir: {}
+
+      # --- Pod 분산 배치 (고가용성) ---
+      affinity:
+        podAntiAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+            - weight: 100
+              podAffinityTerm:
+                labelSelector:
+                  matchLabels:
+                    app: APP_NAME
+                topologyKey: kubernetes.io/hostname   # 같은 노드 회피

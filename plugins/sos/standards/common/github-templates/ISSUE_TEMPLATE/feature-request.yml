@@ -1,0 +1,55 @@
+# 기능 요청 이슈 폼 — "만들지 말지"를 먼저 묻는다.
+# 아래 셋 중 둘 이상이 비어 있으면 구현 대신 requirements-analyst / PRD 단계로 보낸다.
+name: Feature Request
+description: 새 기능 제안 — 누가 쓰고, 안 만들면 무엇이 깨지고, 되돌리는 비용은 얼마인가
+title: "[Feature] "
+labels: ["enhancement"]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: 문제
+      description: 기능이 아니라 "지금 무엇이 불편한가"를 적는다
+    validations:
+      required: true
+
+  - type: textarea
+    id: users
+    attributes:
+      label: 누가 · 몇 명이 쓰는가
+      placeholder: 운영팀 4명, 매일 · 또는 전체 사용자의 약 30%
+    validations:
+      required: true
+
+  - type: textarea
+    id: cost-of-not
+    attributes:
+      label: 안 만들면 지금 무엇이 깨지는가
+      description: 아무것도 깨지지 않으면 만들지 않는다 (YAGNI 는 "어떻게"의 원칙, 이 칸이 "만들지"의 기준)
+    validations:
+      required: true
+
+  - type: textarea
+    id: mvp
+    attributes:
+      label: MVP 범위
+      placeholder: |
+        - 되는 것: CSV 내보내기 버튼 하나
+        - 안 되는 것: 스케줄링, 이메일 발송
+
+  - type: dropdown
+    id: reversibility
+    attributes:
+      label: 틀렸을 때 되돌리는 비용
+      description: 싸면 MVP 로 바로, 비싸면 PRD → Feature Spec 부터
+      options:
+        - 낮음 — 플래그로 끄면 끝
+        - 중간 — 마이그레이션·설정 되돌리기 필요
+        - 높음 — 데이터 스키마·외부 계약·요금에 영향
+      default: 0
+
+  - type: input
+    id: prd
+    attributes:
+      label: PRD / Feature Spec 링크
+      placeholder: docs/product/2026-09-15_export.md (없으면 비워 둔다)

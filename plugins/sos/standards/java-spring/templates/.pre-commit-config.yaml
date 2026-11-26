@@ -1,0 +1,115 @@
+repos:
+  # ── File hygiene ───────────────────────────────────────────────────────────
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v4.6.0
+    hooks:
+      - id: trailing-whitespace
+      - id: end-of-file-fixer
+      - id: check-yaml
+      - id: check-toml
+      - id: check-json
+      - id: check-merge-conflict
+      - id: check-added-large-files
+        args: ["--maxkb=1000"]
+      - id: no-commit-to-branch
+        args: ["--branch", "main", "--branch", "master"]
+      - id: detect-private-key
+
+  # ── google-java-format — Java formatter (commit) ──────────────────────────
+  # Requires: brew install google-java-format
+  #   OR: download from https://github.com/google/google-java-format/releases
+  - repo: local
+    hooks:
+      - id: google-java-format
+        name: google-java-format
+        entry: bash -c '
+          if command -v google-java-format &>/dev/null; then
+            google-java-format --replace --aosp "$@"
+          else
+            echo "[SKIP] google-java-format not installed"
+          fi' --
+        language: system
+        files: \.java$
+        exclude: (generated|build)/
+
+  # ── Checkstyle — style check (commit) ─────────────────────────────────────
+  - repo: local
+    hooks:
+      - id: checkstyle
+        name: checkstyle (Google Style)
+        entry: bash -c '
+          ROOT=$(git rev-parse --show-toplevel)
+          cd "$ROOT" || exit 1
+          if [[ -f "gradlew" ]]; then
+            ./gradlew checkstyleMain --daemon -q
+          else
+            echo "[SKIP] gradlew not found"
+          fi'
+        language: system
+        files: \.java$
+        pass_filenames: false
+
+  # ── SpotBugs — bug & security detection (push) ────────────────────────────
+  # Runs on push only (slower than checkstyle)
+  - repo: local
+    hooks:
+      - id: spotbugs
+        name: spotbugs static analysis
+        entry: bash -c '
+          ROOT=$(git rev-parse --show-toplevel)
+          cd "$ROOT" || exit 1
+          if [[ -f "gradlew" ]]; then
+            ./gradlew spotbugsMain --daemon -q
+          else
+            echo "[SKIP] gradlew not found"
+          fi'
+        language: system
+        files: \.java$
+        pass_filenames: false
+        stages: [pre-push]
+
+  # ── Secret detection ──────────────────────────────────────────────────────
+  - repo: https://github.com/Yelp/detect-secrets
+    rev: v1.5.0
+    hooks:
+      - id: detect-secrets
+        args: ["--baseline", ".secrets.baseline"]
+
+  # ── File size limit ───────────────────────────────────────────────────────
+  # Java class max 800 lines (synced with checkstyle FileLength)
+  - repo: local
+    hooks:
+      - id: file-size-limit
+        name: File size limit (800 lines)
+        entry: >
+          bash -c 'f=0; for x in "$@"; do
+            l=$(( $(wc -l < "$x") )); if [ "$l" -gt 800 ]; then
+            echo "FAIL: $x ($l lines, max 800)"; f=1; fi; done; exit $f' --
+        language: system
+        files: ^src/main/.*\.java$
+
+  # ── coverage gate (push) — changed lines 80% + total never below .coverage-baseline ─────
+  # scripts/coverage-gate.sh (copied by bootstrap; needs uv). Report: the Gradle JaCoCo XML report (quality.gradle.kts).
+  # First adoption: run it once with --write-baseline and commit .coverage-baseline.
+  - repo: local
+    hooks:
+      - id: coverage-gate
+        name: Coverage gate (changed lines 80% + ratchet)
+        entry: bash -c './gradlew test jacocoTestReport -q && scripts/coverage-gate.sh build/reports/jacoco/test/jacocoTestReport.xml'
+        language: system
+        pass_filenames: false
+        types: [java]
+        stages: [pre-push]
+
+  # ── 테스트 영수증 대조 (push 시) ──────────────────────────────────────────
+  # apply.sh --only hooks 가 배치한 .githooks/pre-push 를 pre-commit 이 실행한다 (git 훅 경로 설정 불필요)
+  # 설치: pre-commit install --hook-type pre-commit --hook-type pre-push
+  - repo: local
+    hooks:
+      - id: test-receipt-pre-push
+        name: test receipt (pre-push)
+        entry: .githooks/pre-push
+        language: script
+        stages: [pre-push]
+        always_run: true
+        pass_filenames: false

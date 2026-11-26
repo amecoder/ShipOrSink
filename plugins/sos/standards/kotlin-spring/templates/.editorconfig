@@ -1,0 +1,37 @@
+root = true
+
+# ── 전체 파일 공통 ─────────────────────────────────────────────────────────────
+[*]
+charset = utf-8
+end_of_line = lf
+indent_style = space
+trim_trailing_whitespace = true
+insert_final_newline = true
+
+# ── Kotlin ───────────────────────────────────────────────────────────────────
+[*.{kt,kts}]
+indent_size = 4
+max_line_length = 120
+ktlint_standard_trailing-comma-on-call-site = disabled
+ktlint_standard_trailing-comma-on-declaration-site = disabled
+
+# ── Java ─────────────────────────────────────────────────────────────────────
+[*.java]
+indent_size = 4
+max_line_length = 120
+
+# ── YAML ─────────────────────────────────────────────────────────────────────
+[*.{yml,yaml}]
+indent_size = 2
+
+# ── JSON ─────────────────────────────────────────────────────────────────────
+[*.json]
+indent_size = 2
+
+# ── Gradle ───────────────────────────────────────────────────────────────────
+[*.gradle]
+indent_size = 4
+
+# ── Markdown ─────────────────────────────────────────────────────────────────
+[*.md]
+trim_trailing_whitespace = false

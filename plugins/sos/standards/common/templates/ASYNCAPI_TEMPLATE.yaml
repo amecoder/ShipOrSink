@@ -1,0 +1,74 @@
+asyncapi: 3.0.0
+info:
+  title: Service Events
+  version: 0.1.0
+  description: Replace with the event contract purpose.
+defaultContentType: application/json
+servers:
+  production:
+    host: broker.example.com
+    protocol: kafka
+channels:
+  resourceEvents:
+    address: resources.events.v1
+    messages:
+      ResourceCreated:
+        $ref: "#/components/messages/ResourceCreated"
+operations:
+  publishResourceCreated:
+    action: send
+    channel:
+      $ref: "#/channels/resourceEvents"
+    messages:
+      - $ref: "#/channels/resourceEvents/messages/ResourceCreated"
+components:
+  messages:
+    ResourceCreated:
+      name: ResourceCreated
+      title: Resource Created
+      summary: A resource was created.
+      contentType: application/json
+      headers:
+        $ref: "#/components/schemas/EventHeaders"
+      payload:
+        $ref: "#/components/schemas/ResourceCreatedPayload"
+      examples:
+        - name: example
+          payload:
+            eventId: 018f0b0a-4b7c-73d5-8fc9-6f9d04b77111
+            eventType: ResourceCreated
+            schemaVersion: 1
+            occurredAt: "2026-05-01T00:00:00Z"
+            resourceId: 018f0b0a-4b7c-73d5-8fc9-6f9d04b77222
+  schemas:
+    EventHeaders:
+      type: object
+      required:
+        - traceparent
+      properties:
+        traceparent:
+          type: string
+    ResourceCreatedPayload:
+      type: object
+      required:
+        - eventId
+        - eventType
+        - schemaVersion
+        - occurredAt
+        - resourceId
+      properties:
+        eventId:
+          type: string
+          format: uuid
+        eventType:
+          type: string
+          const: ResourceCreated
+        schemaVersion:
+          type: integer
+          minimum: 1
+        occurredAt:
+          type: string
+          format: date-time
+        resourceId:
+          type: string
+          format: uuid

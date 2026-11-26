@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  SonarLint.xml — SonarAnalyzer.CSharp 규칙의 한도 숫자 (Directory.Build.props 가 AdditionalFiles 로 넘긴다)
+  .editorconfig 는 severity 만 정한다 — 숫자는 이 파일로만 바뀐다. 이 파일이 없으면 Sonar 기본값
+  (S1541 = 10, S138 = 80)이 적용된다. 정본: dev-standards common/quality-thresholds.yaml
+  검증: dev-standards tests/enforcement-csharp.bats (15 · 50 통과, 16 · 51 실패)
+-->
+<AnalysisInput>
+  <Rules>
+    <!-- S1541 순환 복잡도 — 메서드당 15 까지 (초과 시 보고) -->
+    <Rule>
+      <Key>S1541</Key>
+      <Parameters>
+        <Parameter>
+          <Key>maximumFunctionComplexityThreshold</Key>
+          <Value>15</Value>
+        </Parameter>
+      </Parameters>
+    </Rule>
+    <!-- S138 함수 길이 — 중괄호 안쪽 줄 50 까지 (빈 줄·주석만 있는 줄은 세지 않는다) -->
+    <Rule>
+      <Key>S138</Key>
+      <Parameters>
+        <Parameter>
+          <Key>max</Key>
+          <Value>50</Value>
+        </Parameter>
+      </Parameters>
+    </Rule>
+  </Rules>
+</AnalysisInput>

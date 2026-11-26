@@ -1,0 +1,69 @@
+# ============================================================================
+# PR 정책 검사 워크플로우 템플릿
+# ============================================================================
+# 사용법: apply.sh --only github 가 .github/workflows/pr-checks.yml 로 배치한다.
+#   판정 로직은 .github/scripts/pr-policy.sh 한 곳에 있다 — 로컬에서도 같은 스크립트로 검증 가능.
+#
+# 검사 3종 (모두 라벨로 예외 처리):
+#   1. 본문에 Closes/Fixes/Resolves #N          → 라벨 no-issue 로 면제
+#   2. 변경 800줄 이하 (lockfile 제외)           → 라벨 large-pr-approved 로 면제
+#   3. '### 테스트 방법' · '### 롤백 계획' 작성   → 면제 없음
+#
+# 필수 조건:
+#   - .github/scripts/pr-policy.sh 가 함께 배치되어 있어야 한다
+#   - ruleset 필수 상태 체크에 job 이름 `pr-policy` 등록 (.github/rulesets/main-protection.json)
+#   - labeled/unlabeled 이벤트로 라벨 변경 시 재판정된다
+# ============================================================================
+
+name: PR Checks
+
+on:
+  pull_request:
+    types: [opened, edited, synchronize, reopened, labeled, unlabeled]
+
+# 같은 PR 의 이전 실행은 취소
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+# 최소 권한 — 본문·라벨·파일 목록 읽기만
+permissions:
+  contents: read
+  pull-requests: read
+
+env:
+  # 변경 줄 수 상한 (추가+삭제, lockfile 제외). 프로젝트에 맞게 조정
+  PR_MAX_LINES: "800"
+
+jobs:
+  # job 이름이 곧 ruleset 의 required_status_checks.context 다 — 바꾸면 ruleset 도 바꿔야 한다
+  pr-policy:
+    name: pr-policy
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          persist-credentials: false
+
+      # gh 로 PR 메타데이터를 파일로 받는다 — 본문에 셸 특수문자가 있어도 안전하게 전달
+      - name: Fetch PR body, labels, files
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+        run: |
+          gh pr view "$PR_NUMBER" --json body   --jq '.body // ""'                  > "$RUNNER_TEMP/body.md"
+          gh pr view "$PR_NUMBER" --json labels --jq '[.labels[].name] | join(",")' > "$RUNNER_TEMP/labels.txt"
+          # `gh pr view --json files` 는 100개 파일 상한 — REST 를 페이지네이션한다
+          gh api "repos/${GITHUB_REPOSITORY}/pulls/${PR_NUMBER}/files" --paginate \
+            --jq '[.[] | {path: .filename, additions, deletions}]' | jq -s 'add // []' > "$RUNNER_TEMP/files.json"
+
+      - name: Evaluate PR policy
+        env:
+          PR_BODY_FILE: ${{ runner.temp }}/body.md
+          PR_FILES_JSON: ${{ runner.temp }}/files.json
+          PR_AUTHOR: ${{ github.event.pull_request.user.login }}
+        run: |
+          PR_LABELS="$(cat "$RUNNER_TEMP/labels.txt")"
+          export PR_LABELS
+          bash .github/scripts/pr-policy.sh
