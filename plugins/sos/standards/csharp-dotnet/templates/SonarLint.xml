@@ -2,8 +2,8 @@
 <!--
   SonarLint.xml — SonarAnalyzer.CSharp 규칙의 한도 숫자 (Directory.Build.props 가 AdditionalFiles 로 넘긴다)
   .editorconfig 는 severity 만 정한다 — 숫자는 이 파일로만 바뀐다. 이 파일이 없으면 Sonar 기본값
-  (S1541 = 10, S138 = 80)이 적용된다. 정본: dev-standards common/quality-thresholds.yaml
-  검증: dev-standards tests/enforcement-csharp.bats (15 · 50 통과, 16 · 51 실패)
+  (S1541 = 10, S138 = 80)이 적용된다. 정본: sos 표준 common/quality-thresholds.yaml
+  검증: ShipOrSink tests/enforcement-csharp.bats (15 · 50 통과, 16 · 51 실패)
 -->
 <AnalysisInput>
   <Rules>

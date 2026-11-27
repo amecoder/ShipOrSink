@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# coverage-gate.sh — the coverage quality gate (dev-standards common/quality-thresholds.yaml, roadmap stage 3 A7):
+# coverage-gate.sh — the coverage quality gate (sos standards common/quality-thresholds.yaml):
 #   1. changed lines: diff-cover — the lines this branch changed must be >= --fail-under % covered (default 80)
 #   2. ratchet: the total line coverage must not drop below the number in --baseline (default .coverage-baseline)
 # Copied into projects as scripts/coverage-gate.sh by the language bootstraps and called after the coverage report is
