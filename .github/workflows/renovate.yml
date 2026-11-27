@@ -1,10 +1,10 @@
 # ============================================================================
-# Renovate — 주기적 버전 갱신 (로드맵 2단계 · docs/research/2026-11-04_개선-로드맵-신규-개념-적용-검토.md §5-2)
+# Renovate — 주기적 버전 갱신 (sos 표준의 도구 핀 + 이 저장소의 CI)
 # ============================================================================
-# 꺼진 상태로 배치한다. 사람이 할 일(README 「Renovate 켜기」):
+# 꺼진 상태로 배치한다. 켜려면 사람이 아래 순서로 한다:
 #   1. 전용 GitHub App 을 만들고 이 저장소에만 설치 — 권한: Contents · Pull requests · Issues · Commit statuses ·
 #      Workflows 쓰기, Checks · Dependabot alerts 읽기. 저장소 변수 RENOVATE_APP_CLIENT_ID · 저장소 시크릿 RENOVATE_APP_PRIVATE_KEY 등록
-#      (environment 시크릿은 private 저장소에서 GitHub Pro 이상 전용이라 쓰지 않는다 — 이 저장소는 Free)
+#      (environment 는 쓰지 않는다 — 저장소 시크릿을 이 워크플로 하나만 부르게 테스트가 지킨다)
 #   2. 저장소 변수 RENOVATE_ENABLED=true → workflow_dispatch 로 첫 실행 → Dependency Dashboard 이슈 확인
 # GITHUB_TOKEN 을 쓰지 않는다 — 그 토큰이 만든 PR 에서는 CI 가 돌지 않는다(GitHub 문서).
 # 자동 머지는 없다(renovate.json platformAutomerge:false · automerge:false) — 모든 PR 은 CI 를 거쳐 사람이 머지한다.
@@ -32,7 +32,7 @@ env:
 jobs:
   renovate:
     name: renovate
-    # main only: on Free private repos there is no environment branch restriction, so the job condition does it
+    # main only: no environment is used, so the job condition is the branch restriction
     if: vars.RENOVATE_ENABLED == 'true' && github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     timeout-minutes: 30

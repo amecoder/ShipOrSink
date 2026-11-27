@@ -36,6 +36,10 @@ sos 를 원래 저장소(`amecoder/dev-standards`) 없이 혼자 운영할 수 �
 - 원래 있던 문제 발견: `apply.sh --help` 가 색 코드(`\033[…`)를 81곳에서 글자 그대로 찍는다(unquoted heredoc 을 `cat` 으로 출력). PR 2 에서 테스트와 함께 고친다(2026-11-27 사용자 결정)
 - 플러그인 버전은 0.1.0 그대로 — 버전 올리기는 PR 4 의 릴리스 절차에서 정한다
 
+### PR 3 이 이어받을 것 (PR 2 리뷰에서 나옴)
+- `tests/templates.bats` 의 AGENTS.md 한도 테스트에 넣은 `skip "repo AGENTS.md not added yet (PR 3)"` 를 지운다
+- `tests/claims.bats` 의 `DOCS` 는 `REPO_ROOT`(표준 폴더) 기준이라 루트 `CLAUDE.md`·`AGENTS.md` 를 못 본다 — 루트 문서를 대상에 넣고 `QUOTE_COUNT` 를 다시 맞춘다
+
 ### 주의
 - 커밋·push·PR 은 사용자가 요청할 때만
 - 원래 저장소 세션의 가드는 다른 저장소 push 를 막는다 — 이 저장소 작업은 이 폴더에서 연 세션에서 한다

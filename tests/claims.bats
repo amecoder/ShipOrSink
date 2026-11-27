@@ -96,7 +96,7 @@ enforce_items() {
         | (.file // "?") + ": " + ((.text // "?") | tostring)' "$CLAIMS")"
     [ -z "$bad" ] || { echo "need non-empty file/text and exactly one non-empty test/advisory:"; echo "$bad"; return 1; }
     while IFS= read -r name; do
-        grep -qF "@test \"$name\"" "$REPO_ROOT"/tests/*.bats || bad="$bad [$name]"
+        grep -qF "@test \"$name\"" "$PROJECT_ROOT"/tests/*.bats || bad="$bad [$name]"
     done < <(yq -r '.claims[] | select(has("test")) | .test' "$CLAIMS")
     [ -z "$bad" ] || { echo "claims point at tests that do not exist:$bad"; return 1; }
     # an entry whose exact line is gone from the rule file is stale

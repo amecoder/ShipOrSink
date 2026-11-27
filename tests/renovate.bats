@@ -79,9 +79,9 @@ setup() {
     [ "$status" -eq 0 ] || { echo "the job is not gated on vars.RENOVATE_ENABLED and the main branch"; return 1; }
     run bash -c "yq -o=json '.' '$WF' | jq -e '.permissions == {}'"
     [ "$status" -eq 0 ] || { echo "workflow GITHUB_TOKEN permissions are not empty"; return 1; }
-    # environment secrets/variables and deployment branches need GitHub Pro+ on private repos — this repo is Free (2026-11-05)
+    # no environment: the job condition restricts the branch (origin: environments needed GitHub Pro+ on the private source repo)
     run yq -e '.jobs.renovate | has("environment") | not' "$WF"
-    [ "$status" -eq 0 ] || { echo "the job uses an environment: its secrets are unavailable on GitHub Free private repos"; return 1; }
+    [ "$status" -eq 0 ] || { echo "the job uses an environment: this workflow is designed to run without one (job condition restricts the branch)"; return 1; }
     run yq -e '.jobs.renovate.steps[] | select(.uses | test("^actions/create-github-app-token@[0-9a-f]{40}")) | .with["private-key"] == "${{ secrets.RENOVATE_APP_PRIVATE_KEY }}"' "$WF"
     [ "$status" -eq 0 ] || { echo "no dedicated App token step"; return 1; }
     run yq -e '.jobs.renovate.steps[] | select(.uses | test("^renovatebot/github-action@[0-9a-f]{40}")) | .with.token == "${{ steps.app-token.outputs.token }}"' "$WF"
@@ -92,7 +92,7 @@ setup() {
 }
 
 @test "renovate 워크플로: 트리거가 schedule · workflow_dispatch 뿐이고, App 개인 키를 부르는 워크플로는 renovate.yml 하나다" {
-    # repo-level secret (Free plan, no environment): any workflow that names it gets it — keep it to this one file
+    # repo-level secret (no environment): any workflow that names it gets it — keep it to this one file
     run bash -c "yq -o=json '.on' '$WF' | jq -e 'keys == [\"schedule\", \"workflow_dispatch\"]'"
     [ "$status" -eq 0 ] || { echo "renovate.yml triggers changed (any extra trigger would run with the App key)"; return 1; }
     local users

@@ -1,5 +1,5 @@
 # CODEOWNERS — ShipOrSink
-# 마지막 매칭 패턴이 우선. 보호 브랜치 ruleset 이 CODEOWNERS 승인을 요구한다 (.github/rulesets/main-protection.json).
+# 마지막 매칭 패턴이 우선. 지금 ruleset 은 CODEOWNERS 승인을 요구하지 않는다(require_code_owner_review: false) — 리뷰 요청 대상만 정한다.
 
 # 기본 소유자
 *                               @amecoder

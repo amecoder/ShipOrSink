@@ -215,9 +215,9 @@ checkout_persist_values() {
     [ -z "$bad" ] || { echo "$bad"; return 1; }
 }
 
-# Actions minutes (GitHub Free private repo: 2,000 min/month, each job billed rounded up to a whole minute).
-# 2026-11-05 measurement: one PR = 22 min on the PR + 17 min CI again on main after the squash merge.
-# PR CI already ran on the merge ref, so the main re-run is dropped; workflow_dispatch runs it on demand.
+# CI runs on pull requests only: PR CI already ran on the merge ref, so a main re-run after the squash merge adds
+# nothing (origin: a private repo's Actions minutes, measured 2026-11-05 as 22 min per PR + 17 min again on main).
+# workflow_dispatch runs it on main on demand.
 @test "ci: 자체 CI 는 PR 에서만 자동으로 돈다 — 머지 뒤 main 재실행 없음, 필요하면 수동 실행 (Actions 무료 시간 절약)" {
     run bash -c "yq -o=json '.on' '$PROJECT_ROOT/.github/workflows/ci.yml' | jq -e 'keys == [\"pull_request\", \"workflow_dispatch\"]'"
     [ "$status" -eq 0 ] || { echo "ci.yml triggers: $(yq -o=json -I=0 '.on' "$PROJECT_ROOT/.github/workflows/ci.yml")"; return 1; }
@@ -325,7 +325,11 @@ agents_budget_violation() { # file — prints a line when the file alone exceeds
 
 @test "context: AGENTS.md 템플릿과 이 저장소의 AGENTS.md 가 Codex 기본 한도 32 KiB 이하" {
     local out
-    out="$(agents_budget_violation "$REPO_ROOT/common/templates/AGENTS_TEMPLATE.md"; agents_budget_violation "$PROJECT_ROOT/AGENTS.md")"
+    out="$(agents_budget_violation "$REPO_ROOT/common/templates/AGENTS_TEMPLATE.md")"
+    [ -z "$out" ] || { echo "$out"; return 1; }
+    # the repo's own AGENTS.md arrives in PR 3 (HANDOFF) — remove this skip there
+    [ -f "$PROJECT_ROOT/AGENTS.md" ] || skip "repo AGENTS.md not added yet (PR 3)"
+    out="$(agents_budget_violation "$PROJECT_ROOT/AGENTS.md")"
     [ -z "$out" ] || { echo "$out"; return 1; }
 }
 
