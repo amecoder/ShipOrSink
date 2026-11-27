@@ -287,7 +287,7 @@ echo "║  필수 후속 작업:                                              �
 echo "║  1. Cargo.toml — [lints.clippy] 섹션 추가                   ║"
 echo "║  2. clippy.toml — msrv, 복잡도 임계값 조정                  ║"
 echo "║  3. deny.toml — 라이선스 허용 목록 확인                     ║"
-echo "║  4. Claude 훅·pre-push: dev-standards apply.sh --only hooks ║"
+echo "║  4. Claude 훅·pre-push: sos apply.sh --only hooks         ║"
 echo "║  5. pre-commit run --all-files  (전체 검사)                  ║"
 echo "╠═══════════════════════════════════════════════════════════════╣"
 echo "║  검증:                                                        ║"

@@ -516,7 +516,7 @@ alwaysApply: false
 여러 AI 도구를 혼용하는 팀은 **규칙의 단일 소스(Single Source of Truth)**를 유지해야 한다.
 
 ```
-dev-standards/
+my-project/
 ├── common/rules/           # Claude Code Rules (원본)
 ├── .github/
 │   └── copilot-instructions.md  # Copilot용 (common/rules에서 파생)

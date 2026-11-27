@@ -15,7 +15,7 @@ metadata:
   name: APP_NAME                        # 서비스 이름 (DNS: APP_NAME.NAMESPACE.svc.cluster.local)
   namespace: NAMESPACE                  # 네임스페이스
   labels:
-    # dev-standards 필수 라벨
+    # sos 표준 필수 라벨
     app: APP_NAME
     version: APP_VERSION
     environment: ENVIRONMENT

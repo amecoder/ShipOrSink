@@ -36,6 +36,8 @@ claude plugin install sos@shiporsink
 
 필요한 것: `git`, `python3`, `bash`. 셋업은 언어별 도구(ruff, eslint 등)를 쓰므로 그 언어 도구가 설치돼 있어야 한다.
 
+`sos:setup` 이 깔아 주는 표준(적용 수준 4단계, 언어 10개, 품질 기준, 업데이트 방법)과 셸에서 `apply.sh` 를 직접 쓰는 법은 [표준 설명서](plugins/sos/standards/README.md)에 있다.
+
 ## 사용
 
 ```
@@ -54,7 +56,7 @@ for t in tests/test-*.sh; do bash "$t" || echo "FAIL $t"; done
 
 ## 출처
 
-`plugins/sos/standards/` 는 dev-standards 템플릿의 복사본이다(원본 커밋은 `standards/.source-commit`). 단계 구성과 완료 판정 루프는 Anthropic Claude Code best practices, OpenAI harness engineering, mattpocock/skills 의 생각을 참고했다.
+`plugins/sos/standards/` 의 표준은 예전 dev-standards 템플릿에서 출발했고, 지금은 이 저장소에서 직접 관리한다. 단계 구성과 완료 판정 루프는 Anthropic Claude Code best practices, OpenAI harness engineering, mattpocock/skills 의 생각을 참고했다.
 
 ## 라이선스
 

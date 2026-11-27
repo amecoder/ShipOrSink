@@ -58,7 +58,7 @@ variable "availability_zones" {
 # --- Locals (공통 태그) ---
 
 locals {
-  # dev-standards Terraform Rules 준수: Name, Environment, Team, ManagedBy=terraform
+  # sos 표준 Terraform Rules 준수: Name, Environment, Team, ManagedBy=terraform
   common_tags = {
     Name        = var.project_name
     Environment = var.environment

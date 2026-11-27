@@ -70,7 +70,7 @@ TARGET_LANG="${LANG_OVERRIDE:-$(detect_language "$TARGET_DIR")}"
 
 echo ""
 echo "╔══════════════════════════════════════╗"
-echo "║       dev-standards bootstrap        ║"
+echo "║       sos standards bootstrap        ║"
 echo "╠══════════════════════════════════════╣"
 echo "║  언어  : $TARGET_LANG"
 echo "║  경로  : $TARGET_DIR"

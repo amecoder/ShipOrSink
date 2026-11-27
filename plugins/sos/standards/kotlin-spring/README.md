@@ -1,5 +1,7 @@
 # Kotlin / Spring Boot 품질 체계
 
+> 명령의 `$SOS_STANDARDS` 는 sos 표준 폴더 경로다. 값을 구하는 법은 [표준 설명서](../README.md#설치)에 있다. Claude Code 에서는 `/sos:setup` 이 같은 적용을 대화로 해 준다.
+
 ## 포함 도구
 
 | 도구 | 역할 | Python 대응 |
@@ -16,7 +18,7 @@
 
 ```bash
 cd /path/to/my-kotlin-project
-bash ~/.dev-standards/kotlin-spring/bootstrap.sh
+bash "$SOS_STANDARDS/kotlin-spring/bootstrap.sh"
 ```
 
 ## 수동 적용 (단계별)
@@ -24,7 +26,7 @@ bash ~/.dev-standards/kotlin-spring/bootstrap.sh
 ### 1. quality.gradle.kts 적용
 
 ```bash
-cp ~/.dev-standards/kotlin-spring/templates/quality.gradle.kts .
+cp "$SOS_STANDARDS/kotlin-spring/templates/quality.gradle.kts" .
 ```
 
 `quality.gradle.kts` 의 내용을 `build.gradle.kts` 에 **합친다** — `plugins { }` 블록과 `kotlin { jvmToolchain }` 은 기존 것과 하나로 합치고,
@@ -41,13 +43,13 @@ JaCoCo 0.8.16 · OWASP 13.0.0 · ArchUnit 1.5.1 · MockK 1.14.11 · Kotest 6.2.6
 `libs-quality.versions.toml` 내용을 기존 `libs.versions.toml`에 병합:
 
 ```bash
-cat ~/.dev-standards/kotlin-spring/templates/libs-quality.versions.toml
+cat "$SOS_STANDARDS/kotlin-spring/templates/libs-quality.versions.toml"
 ```
 
 ### 3. detekt.yml 복사
 
 ```bash
-cp ~/.dev-standards/kotlin-spring/templates/detekt.yml .
+cp "$SOS_STANDARDS/kotlin-spring/templates/detekt.yml" .
 ```
 
 수정 포인트:
@@ -81,17 +83,17 @@ cp ~/.dev-standards/kotlin-spring/templates/detekt.yml .
 ### 4. 나머지 파일 복사
 
 ```bash
-cp ~/.dev-standards/kotlin-spring/templates/.editorconfig .
-cp ~/.dev-standards/kotlin-spring/templates/.pre-commit-config.yaml .
-bash ~/.dev-standards/apply.sh --only hooks --target .     # 공통 Claude Code 훅 + .githooks/pre-push
-bash ~/.dev-standards/apply.sh --only settings --target .  # 팀 공유 .claude/settings.json (있으면 병합)
+cp "$SOS_STANDARDS/kotlin-spring/templates/.editorconfig" .
+cp "$SOS_STANDARDS/kotlin-spring/templates/.pre-commit-config.yaml" .
+bash "$SOS_STANDARDS/apply.sh" --only hooks --target .     # 공통 Claude Code 훅 + .githooks/pre-push
+bash "$SOS_STANDARDS/apply.sh" --only settings --target .  # 팀 공유 .claude/settings.json (있으면 병합)
 ```
 
 ### 5. ArchUnit 테스트 복사
 
 ```bash
 mkdir -p src/test/kotlin/com/example/architecture
-cp ~/.dev-standards/kotlin-spring/templates/ArchitectureTest.kt \
+cp "$SOS_STANDARDS/kotlin-spring/templates/ArchitectureTest.kt" \
    src/test/kotlin/com/example/architecture/
 # BASE_PACKAGE를 실제 패키지명으로 변경
 ```

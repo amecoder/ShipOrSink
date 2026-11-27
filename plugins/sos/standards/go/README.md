@@ -1,5 +1,7 @@
 # Go 품질 체계
 
+> 명령의 `$SOS_STANDARDS` 는 sos 표준 폴더 경로다. 값을 구하는 법은 [표준 설명서](../README.md#설치)에 있다. Claude Code 에서는 `/sos:setup` 이 같은 적용을 대화로 해 준다.
+
 ## 포함 도구
 
 | 도구 | 역할 | Python 대응 | Kotlin 대응 |
@@ -15,7 +17,7 @@
 
 ```bash
 cd /path/to/my-go-project
-bash ~/.dev-standards/go/bootstrap.sh
+bash "$SOS_STANDARDS/go/bootstrap.sh"
 ```
 
 ## 수동 적용 (단계별)
@@ -23,7 +25,7 @@ bash ~/.dev-standards/go/bootstrap.sh
 ### 1. golangci-lint 설정 복사
 
 ```bash
-cp ~/.dev-standards/go/templates/.golangci.yml .
+cp "$SOS_STANDARDS/go/templates/.golangci.yml" .
 ```
 
 수정 포인트:
@@ -37,20 +39,20 @@ cp ~/.dev-standards/go/templates/.golangci.yml .
 ### 2. .editorconfig 복사
 
 ```bash
-cp ~/.dev-standards/go/templates/.editorconfig .
+cp "$SOS_STANDARDS/go/templates/.editorconfig" .
 ```
 
 ### 3. .pre-commit-config.yaml 복사
 
 ```bash
-cp ~/.dev-standards/go/templates/.pre-commit-config.yaml .
+cp "$SOS_STANDARDS/go/templates/.pre-commit-config.yaml" .
 ```
 
 ### 4. Claude Code 훅·설정 (공통)
 
 ```bash
-bash ~/.dev-standards/apply.sh --only hooks --target .     # 공통 Claude Code 훅 + .githooks/pre-push
-bash ~/.dev-standards/apply.sh --only settings --target .  # 팀 공유 .claude/settings.json (있으면 병합)
+bash "$SOS_STANDARDS/apply.sh" --only hooks --target .     # 공통 Claude Code 훅 + .githooks/pre-push
+bash "$SOS_STANDARDS/apply.sh" --only settings --target .  # 팀 공유 .claude/settings.json (있으면 병합)
 ```
 
 ### 5. detect-secrets baseline + pre-commit 설치
