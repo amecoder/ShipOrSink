@@ -15,7 +15,7 @@ sos 를 원래 저장소(`amecoder/dev-standards`) 없이 혼자 운영할 수 �
 ### 진행 상태
 | PR | 브랜치 | 상태 |
 |---|---|---|
-| 1 | `feat/standalone-1-install-docs` | 구현·검증 끝, 커밋 전 (2026-11-27) — 안내 92→0줄, `standards/README.md` 설명서, 이름표·복사 흔적 정리, 테스트 4/4 |
+| 1 | `feat/standalone-1-install-docs` | PR #1 리뷰·머지 대기 (커밋 6f6f8c2) — 안내 92→0줄, `standards/README.md` 설명서, 이름표·복사 흔적 정리, 테스트 4/4 |
 | 2 | `feat/standalone-2-tests-ci` | ⬜ |
 | 3 | `feat/standalone-3-agent-docs` | ⬜ |
 | 4 | `feat/standalone-4-maintenance` | ⬜ |
