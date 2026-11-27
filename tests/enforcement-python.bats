@@ -163,7 +163,9 @@ py_coverage_gate() { # covered-count
     for v in SRC_DIR TEST_DIR COVERAGE_THRESHOLD; do
         step="${step//\$\{\{ env.$v \}\}/$(V="$v" yq -r '.env[strenv(V)]' "$CI_PY")}"
     done
-    (cd "$dir" && PYTHONPATH=src bash -e -c "$step -p no:cacheprovider")
+    # -o pythonpath: pytest puts src/ on sys.path itself (rootdir-relative) — PYTHONPATH alone was not honored on
+    # the GitHub runner's pipx pytest (PR #2 CI, cause not reproduced locally)
+    (cd "$dir" && PYTHONPATH=src bash -e -c "$step -p no:cacheprovider -o pythonpath=src")
 }
 
 @test "python: 커버리지 — CI 템플릿 테스트 단계가 정본 % 는 통과시키고 정본-1 % 는 실패시킨다" {

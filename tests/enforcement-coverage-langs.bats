@@ -82,7 +82,8 @@ py_change() { # K-percent → dir
     { echo "from fx.m import *  # noqa: F403"; echo; echo "def test_calls():"
       for i in $(seq 1 "$k"); do echo "    f$i()  # noqa: F405"; done; } > "$d/tests/test_m.py"
     commit_all "$d"
-    (cd "$d" && PYTHONPATH=src pytest tests --cov=src --cov-report=xml:coverage.xml -q -p no:cacheprovider >/dev/null 2>&1)
+    # -o pythonpath: see tests/enforcement-python.bats py_coverage_gate (PYTHONPATH alone failed on the runner)
+    (cd "$d" && PYTHONPATH=src pytest tests --cov=src --cov-report=xml:coverage.xml -q -p no:cacheprovider -o pythonpath=src >/dev/null 2>&1)
     [ -f "$d/coverage.xml" ] || { echo "pytest-cov wrote no coverage.xml"; return 1; }
     echo "$d"
 }
