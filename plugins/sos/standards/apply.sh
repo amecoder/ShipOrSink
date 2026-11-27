@@ -91,7 +91,8 @@ show_help() {
 
 HELPEOF
 
-    cat << EOF
+    # the color variables hold '\033[..m' text (for echo -e); a heredoc does not interpret it — printf %b does
+    printf '%b\n' "$(cat << EOF
 
 ${BOLD}═══ 레벨별 상세 설명 ═══${NC}
 
@@ -317,6 +318,7 @@ ${BOLD}═══ FAQ ═══${NC}
      sos 표준을 다시 적용해도 수정된 파일은 덮어쓰지 않는다.
 
 EOF
+    )"
 }
 
 # ─── Args ────────────────────────────────────────────────────────────────

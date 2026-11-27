@@ -1,0 +1,13 @@
+[
+  { "name": "ai-task",           "color": "1D76DB", "description": "AI 에이전트가 구현할 작업 명세 (AI Task 폼)" },
+  { "name": "ai-ready",          "color": "0E8A16", "description": "사람이 검토 완료 — 에이전트 착수 가능. 사람만 붙인다" },
+  { "name": "ai-in-progress",    "color": "FBCA04", "description": "에이전트가 작업 중 — 브랜치·PR 링크를 이슈에 남긴다" },
+  { "name": "needs-human",       "color": "D93F0B", "description": "사람의 결정·승인·정보가 필요해 멈춤" },
+  { "name": "blocked",           "color": "B60205", "description": "외부 의존·선행 작업으로 진행 불가" },
+  { "name": "no-issue",          "color": "C5DEF5", "description": "이슈 없이 진행하는 PR (오타·CI 설정 등) — pr-policy 이슈 연결 검사 면제" },
+  { "name": "large-pr-approved", "color": "5319E7", "description": "리뷰어가 800줄 초과를 승인 — pr-policy 크기 검사 면제" },
+  { "name": "bug",               "color": "D73A4A", "description": "재현 가능한 결함 — 수정은 실패하는 테스트부터" },
+  { "name": "enhancement",       "color": "A2EEEF", "description": "새 기능 제안" },
+  { "name": "documentation",     "color": "0075CA", "description": "문서만 바뀜" },
+  { "name": "security",          "color": "E11D21", "description": "보안 영향 — security-engineer 리뷰 필수" }
+]

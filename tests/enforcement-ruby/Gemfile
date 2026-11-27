@@ -1,0 +1,17 @@
+# frozen_string_literal: true
+
+# tests/enforcement-ruby.bats fixture — only the RuboCop gems, RSpec, SimpleCov and simplecov-cobertura of the set ruby-rails/bootstrap.sh asks
+# projects to add, at exact versions (+ Gemfile.lock). The test runs the template .rubocop.yml with them through the template hook
+# (`bundle exec rubocop`), so a gem update that breaks the template config fails here. Versions: Renovate bundler.
+source "https://rubygems.org"
+
+gem "rubocop", "1.92.2", require: false
+gem "rubocop-performance", "1.27.0", require: false
+gem "rubocop-rails", "2.38.0", require: false
+gem "rubocop-rails-omakase", "1.1.0", require: false
+gem "rubocop-rake", "0.7.1", require: false
+gem "rubocop-rspec", "3.10.2", require: false
+gem "rubocop-thread_safety", "0.8.0", require: false
+gem "rspec", "3.13.2", require: false
+gem "simplecov", "1.3.2", require: false
+gem "simplecov-cobertura", "4.0.0", require: false

@@ -2,6 +2,7 @@
 # Shared helpers for ShipOrSink shell tests.
 set -u
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+# shellcheck disable=SC2034  # read by the test scripts that source this file
 PLUGIN="$ROOT/plugins/sos"
 PASS=0
 FAIL=0

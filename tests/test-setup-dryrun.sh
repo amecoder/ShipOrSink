@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
 # H3: sos:setup's pre-approval steps (--check, --dry-run) write nothing to the target repo.
+# shellcheck source=SCRIPTDIR/_lib.sh
 . "$(dirname "$0")/_lib.sh"
 APPLY="$PLUGIN/standards/apply.sh"
 [ -f "$APPLY" ] || { echo "  FAIL apply.sh missing"; echo "PASS=0 FAIL=1"; exit 1; }

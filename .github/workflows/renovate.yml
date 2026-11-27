@@ -1,0 +1,61 @@
+# ============================================================================
+# Renovate — 주기적 버전 갱신 (sos 표준의 도구 핀 + 이 저장소의 CI)
+# ============================================================================
+# 꺼진 상태로 배치한다. 켜려면 사람이 아래 순서로 한다:
+#   1. 전용 GitHub App 을 만들고 이 저장소에만 설치 — 권한: Contents · Pull requests · Issues · Commit statuses ·
+#      Workflows 쓰기, Checks · Dependabot alerts 읽기. 저장소 변수 RENOVATE_APP_CLIENT_ID · 저장소 시크릿 RENOVATE_APP_PRIVATE_KEY 등록
+#      (environment 는 쓰지 않는다 — 저장소 시크릿을 이 워크플로 하나만 부르게 테스트가 지킨다)
+#   2. 저장소 변수 RENOVATE_ENABLED=true → workflow_dispatch 로 첫 실행 → Dependency Dashboard 이슈 확인
+# GITHUB_TOKEN 을 쓰지 않는다 — 그 토큰이 만든 PR 에서는 CI 가 돌지 않는다(GitHub 문서).
+# 자동 머지는 없다(renovate.json platformAutomerge:false · automerge:false) — 모든 PR 은 CI 를 거쳐 사람이 머지한다.
+# ============================================================================
+
+name: Renovate
+
+on:
+  schedule:
+    - cron: "23 23 * * 0"   # Monday 08:23 KST
+  workflow_dispatch:
+
+permissions: {}   # GITHUB_TOKEN gets nothing — every write goes through the App token
+
+concurrency:
+  group: renovate
+  cancel-in-progress: false
+
+env:
+  # tag AND digest: this container holds a contents/workflows write token, so a re-pushed tag must not change it.
+  # = ci.yml RENOVATE_VERSION (the config validator runs the same image)
+  # renovate: datasource=docker depName=ghcr.io/renovatebot/renovate
+  RENOVATE_VERSION: "44.211.0@sha256:43725f6de17255edab0d7c448b150d91b6165a35cecaa78444543d418d0bd3d5"
+
+jobs:
+  renovate:
+    name: renovate
+    # main only: no environment is used, so the job condition is the branch restriction
+    if: vars.RENOVATE_ENABLED == 'true' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Create GitHub App token (dedicated App, scoped)
+        id: app-token
+        uses: actions/create-github-app-token@64ab729a6294000f5aa4a4bc0b73d1f32bc45510 # v3.3.0
+        with:
+          client-id: ${{ vars.RENOVATE_APP_CLIENT_ID }}
+          private-key: ${{ secrets.RENOVATE_APP_PRIVATE_KEY }}
+          permission-contents: write
+          permission-pull-requests: write
+          permission-issues: write
+          permission-statuses: write            # minimumReleaseAge posts renovate/stability-days before the PR exists — 403 stops the run
+          permission-checks: read               # without it check-run lookups 403 into "no checks" and CI results are invisible
+          permission-workflows: write          # template copies under .github/ move with common/ — a human merges them
+          permission-vulnerability-alerts: read
+
+      - name: Renovate
+        uses: renovatebot/github-action@1c0cf989c02653fba0efe7ca5772338860ca71dc # v46.3.12
+        with:
+          token: ${{ steps.app-token.outputs.token }}
+          renovate-version: ${{ env.RENOVATE_VERSION }}
+        env:
+          RENOVATE_REPOSITORIES: ${{ github.repository }}
+          RENOVATE_PLATFORM_COMMIT: enabled   # commits made through the API are signed as the App

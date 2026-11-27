@@ -2,9 +2,10 @@
 # Every sos skill has a name matching its folder, a description <= 1024 chars,
 # is model-invocable (sos:cycle calls stages via the Skill tool), and its
 # relative reference links resolve.
+# shellcheck source=SCRIPTDIR/_lib.sh
 . "$(dirname "$0")/_lib.sh"
 EXPECTED="build ci cycle done regress setup ship spec tc"
-got="$(cd "$PLUGIN/skills" && ls -d */ | tr -d / | sort | tr '\n' ' ' | sed 's/ $//')"
+got="$(find "$PLUGIN/skills" -mindepth 1 -maxdepth 1 -type d -exec basename {} \; | sort | tr '\n' ' ' | sed 's/ $//')"
 [ "$got" = "$EXPECTED" ] && ok "9 stage skills present" || bad "skills: '$got'"
 
 for d in "$PLUGIN"/skills/*/; do

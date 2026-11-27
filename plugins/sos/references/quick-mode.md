@@ -231,7 +231,7 @@ Step 2 Co-Review 의 Critical·CONFLICT 는 `done.sh` 로 판정할 수 없는 �
 
 ## 출력 형식
 
-### 진행 중:
+### 진행 중
 ```
 === Dev Cycle (quick) Iteration 2/10 (stall 0) ===
 [PASS] Step 1: Build — 수정 반영 (iter 1 실패 집합: AC-02)
@@ -243,7 +243,7 @@ Step 2 Co-Review 의 Critical·CONFLICT 는 `done.sh` 로 판정할 수 없는 �
 === Dev Cycle (quick) Complete (2 iterations) ===
 ```
 
-### 실패 시:
+### 실패 시
 ```
 === Dev Cycle (quick) Iteration 2/10 ===
 [PASS] Step 1: Build

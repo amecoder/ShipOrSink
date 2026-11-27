@@ -1,0 +1,17 @@
+# CODEOWNERS — ShipOrSink
+# 마지막 매칭 패턴이 우선. 지금 ruleset 은 CODEOWNERS 승인을 요구하지 않는다(require_code_owner_review: false) — 리뷰 요청 대상만 정한다.
+
+# 기본 소유자
+*                               @amecoder
+
+# 강제 계층 · 협업 인프라 — 게이트 자체를 바꾸는 변경은 반드시 소유자 리뷰
+/plugins/sos/standards/common/hooks/                  @amecoder
+/plugins/sos/standards/common/github-templates/       @amecoder
+/plugins/sos/standards/common/security-templates/     @amecoder
+/plugins/sos/standards/common/.claude-settings-team.json @amecoder
+/plugins/sos/standards/apply.sh                       @amecoder
+/plugins/sos/hooks/             @amecoder
+/plugins/sos/scripts/           @amecoder
+/.github/                       @amecoder
+/renovate.json                  @amecoder
+/tests/                         @amecoder

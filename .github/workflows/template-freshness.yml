@@ -1,0 +1,34 @@
+# ============================================================================
+# 템플릿 최신성 — 시계·외부 레지스트리에 의존하는 검사를 PR 게이트 밖에서 주간 실행한다
+# ============================================================================
+#   devcontainer : 템플릿 이미지 태그가 최근 120일 안에 빌드된 계열을 가리키는지 (tests/devcontainer.bats)
+#                  네트워크 실패도 실패로 본다. 실패하면 GitHub 이 워크플로 실패 알림을 보낸다.
+# ============================================================================
+
+name: Template freshness
+
+on:
+  schedule:
+    - cron: "17 3 * * 1"   # Monday 03:17 UTC
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  devcontainer:
+    name: devcontainer-freshness
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          persist-credentials: false
+
+      - name: Install test tools with the repo installer
+        run: bash scripts/install-dev-tools.sh --yes --pm apt
+
+      - name: Check devcontainer image freshness
+        env:
+          DEVCONTAINER_FRESHNESS: "1"
+        run: bats --print-output-on-failure tests/devcontainer.bats

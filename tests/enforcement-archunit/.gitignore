@@ -1,0 +1,7 @@
+.gradle/
+**/build/
+# IDE (Eclipse Buildship / jdtls) metadata
+.project
+.classpath
+.settings/
+bin/

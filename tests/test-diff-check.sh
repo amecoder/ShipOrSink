@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
 # H4: the ship-time diff check rejects test weakening that has no human-approved ledger row.
+# shellcheck source=SCRIPTDIR/_lib.sh
 . "$(dirname "$0")/_lib.sh"
 CHECK="$PLUGIN/scripts/test-diff-check.py"
 [ -f "$CHECK" ] || { echo "  FAIL $CHECK missing: $CHECK"; echo "PASS=0 FAIL=1"; exit 1; }

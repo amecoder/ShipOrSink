@@ -1,0 +1,13 @@
+<!-- tests/enforcement-csharp.bats fixture — the test project. coverlet.collector / coverlet.msbuild are NOT listed:
+     the template Directory.Build.props adds them to every project whose name contains "Test" (listing them here
+     again fails restore with NU1504, as a `dotnet new xunit` project does). Versions: Renovate's nuget manager. -->
+<Project Sdk="Microsoft.NET.Sdk">
+  <ItemGroup>
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.8.0" />
+    <PackageReference Include="xunit" Version="2.5.3" />
+    <PackageReference Include="xunit.runner.visualstudio" Version="2.5.3" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="../Fx/Fx.csproj" />
+  </ItemGroup>
+</Project>

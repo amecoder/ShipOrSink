@@ -1,3 +1,21 @@
+# Environment
+.env
+.env.local
+.env.*.local
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Claude Code 개인 설정 (테스트 영수증은 .git/claude/ 안 — 무시 불필요)
+.claude/settings.local.json
+
+# Python 바이트코드 (hooklib.py 컴파일 검사 잔여물)
 __pycache__/
 *.pyc
-.DS_Store

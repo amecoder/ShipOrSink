@@ -1,0 +1,225 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "description": [
+    "ShipOrSink — periodic version updates for the sos standards (plugins/sos/standards/) and this repo's CI.",
+    "Runs only from .github/workflows/renovate.yml with a dedicated GitHub App token. Safety conditions are checked by tests/renovate.bats."
+  ],
+  "extends": [
+    "config:recommended"
+  ],
+  "timezone": "Asia/Seoul",
+  "labels": [
+    "no-issue"
+  ],
+  "platformAutomerge": false,
+  "automerge": false,
+  "ignoreTests": false,
+  "minimumReleaseAge": "7 days",
+  "dependencyDashboard": true,
+  "vulnerabilityAlerts": {
+    "enabled": true
+  },
+  "pre-commit": {
+    "enabled": true
+  },
+  "github-actions": {
+    "managerFilePatterns": [
+      "/(^|/)common/(ci-templates|security-templates|github-templates/workflows)/[^/]+\\.ya?ml$/"
+    ]
+  },
+  "devcontainer": {
+    "managerFilePatterns": [
+      "/(^|/)common/devcontainer-templates/[^/]+/\\.devcontainer/devcontainer\\.json$/"
+    ]
+  },
+  "customManagers": [
+    {
+      "customType": "regex",
+      "description": "`# renovate: datasource=… depName=…` followed by a *_VERSION line (tests/pins.bats convention). Docker values carry tag@sha256 digest.",
+      "managerFilePatterns": [
+        "/(^|/)\\.github/workflows/[^/]+\\.ya?ml$/",
+        "/(^|/)common/(ci-templates|security-templates|github-templates/workflows)/[^/]+\\.ya?ml$/",
+        "/(^|/)scripts/[^/]+\\.sh$/",
+        "/(^|/)common/testing-templates/[^/]+\\.sh$/"
+      ],
+      "matchStrings": [
+        "#\\s*renovate:\\s*datasource=(?<datasource>[a-z-]+)\\s+depName=(?<depName>\\S+)(?:\\s+versioning=(?<versioning>\\S+))?(?:\\s+extractVersion=(?<extractVersion>\\S+))?\\s*\\n\\s*(?:export\\s+)?[A-Z0-9_]+_VERSION(?::\\s*|=)\"(?<currentValue>[^\"@\\s]+)(?:@(?<currentDigest>sha256:[a-f0-9]{64}))?\""
+      ],
+      "datasourceTemplate": "{{{datasource}}}",
+      "depNameTemplate": "{{{depName}}}",
+      "versioningTemplate": "{{#if versioning}}{{{versioning}}}{{/if}}",
+      "extractVersionTemplate": "{{#if extractVersion}}{{{extractVersion}}}{{/if}}"
+    },
+    {
+      "customType": "regex",
+      "description": "typescript-react/templates/dev-dependencies.txt — one exact name@x.y.z per line (bootstrap.sh installs it).",
+      "managerFilePatterns": [
+        "/(^|/)typescript-react/templates/dev-dependencies\\.txt$/"
+      ],
+      "matchStrings": [
+        "(?:^|\\n)(?<depName>(?:@[a-z0-9-]+/)?[a-z0-9.-]+)@(?<currentValue>[0-9]+\\.[0-9]+\\.[0-9]+)"
+      ],
+      "datasourceTemplate": "npm"
+    },
+    {
+      "customType": "regex",
+      "description": "devcontainer.json (JSONC): `// renovate: datasource=… depName=…` followed by a \"version\": \"…\" option.",
+      "managerFilePatterns": [
+        "/(^|/)common/devcontainer-templates/[^/]+/\\.devcontainer/devcontainer\\.json$/"
+      ],
+      "matchStrings": [
+        "//\\s*renovate:\\s*datasource=(?<datasource>[a-z-]+)\\s+depName=(?<depName>\\S+)(?:\\s+versioning=(?<versioning>\\S+))?\\s*\\n\\s*\"version\":\\s*\"(?<currentValue>[^\"]+)\""
+      ],
+      "datasourceTemplate": "{{{datasource}}}",
+      "depNameTemplate": "{{{depName}}}",
+      "versioningTemplate": "{{#if versioning}}{{{versioning}}}{{/if}}"
+    }
+  ],
+  "packageRules": [
+    {
+      "description": "Never automerge anything that touches the repo's own CI, Claude settings or shipped hooks — a human merges these, permanently.",
+      "matchFileNames": [
+        ".github/**",
+        ".claude/**",
+        "plugins/sos/standards/common/hooks/**"
+      ],
+      "automerge": false
+    },
+    {
+      "description": "Major updates wait for approval on the Dependency Dashboard.",
+      "matchUpdateTypes": [
+        "major"
+      ],
+      "dependencyDashboardApproval": true
+    },
+    {
+      "description": "golangci-lint is pinned in ci.yml, the Go CI template and the Go pre-commit template — one PR, or the parity test fails.",
+      "matchPackageNames": [
+        "golangci/golangci-lint"
+      ],
+      "groupName": "golangci-lint"
+    },
+    {
+      "description": "semgrep image (tag + digest) is pinned in three CI templates and security-review — one PR.",
+      "matchPackageNames": [
+        "semgrep/semgrep"
+      ],
+      "groupName": "semgrep"
+    },
+    {
+      "description": "The TypeScript dev-dependency pins and the enforcement lockfile must move together (tests/enforcement.bats pin equality).",
+      "matchFileNames": [
+        "plugins/sos/standards/typescript-react/templates/dev-dependencies.txt",
+        "tests/enforcement-ts/package.json"
+      ],
+      "groupName": "typescript template dev-dependencies"
+    },
+    {
+      "description": "config:recommended's workarounds:javaLTSVersions sets a full-precision regex versioning; its semver-partial exception covers only github-actions/mise. Keep our partial JAVA_VERSION (\"21\") partial too.",
+      "matchManagers": [
+        "custom.regex"
+      ],
+      "matchDatasources": [
+        "java-version"
+      ],
+      "versioning": "semver-partial"
+    },
+    {
+      "description": "mcr devcontainer tags are <image major>-<language version>-<os> (go:2-1.26-bookworm). docker versioning reads -1.26-bookworm as a compatibility suffix and never moves it; this regex makes the language version the version.",
+      "matchDatasources": [
+        "docker"
+      ],
+      "matchPackageNames": [
+        "/^mcr\\.microsoft\\.com/devcontainers/(go|python|java|typescript-node|rust)$/"
+      ],
+      "versioning": "regex:^(?<build>\\d+)-(?<major>\\d+)(?:\\.(?<minor>\\d+))?-(?<compatibility>[a-z]+)$"
+    },
+    {
+      "description": "No release timestamp (java-version, python-version, docker outside Docker Hub): with the default timestamp-required they would wait forever. Datasources that report a timestamp keep the 7-day wait.",
+      "matchDatasources": [
+        "java-version",
+        "python-version"
+      ],
+      "minimumReleaseAgeBehaviour": "timestamp-optional"
+    },
+    {
+      "description": "Same as above for registries without timestamps (mcr, ghcr).",
+      "matchDatasources": [
+        "docker"
+      ],
+      "matchPackageNames": [
+        "/^mcr\\.microsoft\\.com//",
+        "/^ghcr\\.io//"
+      ],
+      "minimumReleaseAgeBehaviour": "timestamp-optional"
+    },
+    {
+      "description": "Go runtime: GO_VERSION (ci-go) + go devcontainer image.",
+      "matchDatasources": [
+        "golang-version"
+      ],
+      "groupName": "go runtime"
+    },
+    {
+      "description": "Go runtime (devcontainer image).",
+      "matchPackageNames": [
+        "/^mcr\\.microsoft\\.com/devcontainers/go$/"
+      ],
+      "groupName": "go runtime"
+    },
+    {
+      "description": "Python runtime: PYTHON_VERSION (ci-python) + python devcontainer image.",
+      "matchDatasources": [
+        "python-version"
+      ],
+      "groupName": "python runtime"
+    },
+    {
+      "description": "Python runtime (devcontainer image).",
+      "matchPackageNames": [
+        "/^mcr\\.microsoft\\.com/devcontainers/python$/"
+      ],
+      "groupName": "python runtime"
+    },
+    {
+      "description": "Java runtime: JAVA_VERSION (ci-kotlin) + java devcontainer image.",
+      "matchDatasources": [
+        "java-version"
+      ],
+      "groupName": "java runtime"
+    },
+    {
+      "description": "Java runtime (devcontainer image).",
+      "matchPackageNames": [
+        "/^mcr\\.microsoft\\.com/devcontainers/java$/"
+      ],
+      "groupName": "java runtime"
+    },
+    {
+      "description": "Node runtime: NODE_VERSION in ci.yml and ci-typescript, the python devcontainer node feature (tests/enforcement.bats, tests/devcontainer.bats parity) — one PR. Even majors only (LTS); node-version reports v-prefixed full versions.",
+      "matchDatasources": [
+        "node-version"
+      ],
+      "groupName": "node runtime",
+      "allowedVersions": "/^v?[0-9]*[02468](\\.|$)/"
+    },
+    {
+      "description": "Node runtime (typescript-node devcontainer image, tag <image major>-<node major>-<os>; even node majors only).",
+      "matchPackageNames": [
+        "/^mcr\\.microsoft\\.com/devcontainers/typescript-node$/"
+      ],
+      "groupName": "node runtime",
+      "allowedVersions": "/^[0-9]+-[0-9]*[02468]-/"
+    },
+    {
+      "description": "Renovate itself: the image in renovate.yml and the validator image in ci.yml are the same pin — one PR.",
+      "matchPackageNames": [
+        "ghcr.io/renovatebot/renovate"
+      ],
+      "groupName": "renovate"
+    }
+  ],
+  "ignorePaths": [
+    "**/node_modules/**"
+  ]
+}

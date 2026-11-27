@@ -1,0 +1,8 @@
+# gitleaks false positives in git history — fingerprint = commit:file:rule:line
+# 사유: 문서 속 설명용 가짜 예시(알고리즘 이름 'bcrypt/argon2', '...' 로 잘린 JWT, '# NEVER' 나쁜 예시 키).
+# 만료: 2027-11-27 — 그때 다시 검토. 새 항목은 지문 단위로만 추가하고 경로째 빼지 않는다.
+9c87f985e9ee5cf093d494c6fa211a1bf66ed9cf:plugins/sos/standards/common/rules/security.md:generic-api-key:23
+9c87f985e9ee5cf093d494c6fa211a1bf66ed9cf:plugins/sos/standards/common/templates/DESIGN_DOC_TEMPLATE.md:generic-api-key:590
+9c87f985e9ee5cf093d494c6fa211a1bf66ed9cf:plugins/sos/standards/docs/guides/secure-coding-guide.md:generic-api-key:1298
+9c87f985e9ee5cf093d494c6fa211a1bf66ed9cf:plugins/sos/standards/docs/guides/secure-coding-guide.md:generic-env-secret:1298
+9c87f985e9ee5cf093d494c6fa211a1bf66ed9cf:plugins/sos/standards/docs/guides/secure-coding-guide.md:generic-env-secret:1299
