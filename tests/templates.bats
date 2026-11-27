@@ -327,8 +327,6 @@ agents_budget_violation() { # file — prints a line when the file alone exceeds
     local out
     out="$(agents_budget_violation "$REPO_ROOT/common/templates/AGENTS_TEMPLATE.md")"
     [ -z "$out" ] || { echo "$out"; return 1; }
-    # the repo's own AGENTS.md arrives in PR 3 (HANDOFF) — remove this skip there
-    [ -f "$PROJECT_ROOT/AGENTS.md" ] || skip "repo AGENTS.md not added yet (PR 3)"
     out="$(agents_budget_violation "$PROJECT_ROOT/AGENTS.md")"
     [ -z "$out" ] || { echo "$out"; return 1; }
 }

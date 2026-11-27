@@ -38,7 +38,7 @@ env:
   SRC_DIR: "src"
   # 테스트 디렉토리
   TEST_DIR: "tests"
-  # 커버리지 최소 % (정본: dev-standards common/quality-thresholds.yaml)
+  # 커버리지 최소 % (정본: sos 표준 common/quality-thresholds.yaml)
   COVERAGE_THRESHOLD: "80"
   # 함수·파일 크기 훅(.pre-commit-config.yaml 로컬 훅)을 CI 에서 돌릴 pre-commit
   # renovate: datasource=pypi depName=pre-commit

@@ -7,12 +7,13 @@ load helpers
 THRESHOLDS="$REPO_ROOT/common/quality-thresholds.yaml"
 CLAIMS="$REPO_ROOT/common/enforcement.yaml"
 # documents that quote the quality numbers
-DOCS=(README.md CLAUDE.md AGENTS.md common/rules common/templates/PR_TEMPLATE.md)
+# paths from PROJECT_ROOT: the repo's own docs + the shipped standards' docs
+DOCS=(README.md CLAUDE.md AGENTS.md plugins/sos/standards/README.md plugins/sos/standards/common/rules plugins/sos/standards/common/templates/PR_TEMPLATE.md)
 
 # How many quotes of each metric these documents hold today. A quote that is reworded out of the phrasing
 # list (or deleted) drops the count and fails — a per-metric guard, not one "at least N" for everything.
 # Update these numbers deliberately when a document legitimately gains or loses a quote.
-declare -gA QUOTE_COUNT=([complexity]=13 [function_lines]=14 [file_lines]=11 [coverage]=9)
+declare -gA QUOTE_COUNT=([complexity]=14 [function_lines]=16 [file_lines]=13 [coverage]=10)
 
 setup() {
     require_tool yq
@@ -26,7 +27,7 @@ threshold() {
 # that language's own rule file common/rules/<lang>.md.
 expected() { # metric file
     local lang=""
-    case "$2" in common/rules/*.md) lang="$(basename "$2" .md)" ;; esac
+    case "$2" in */common/rules/*.md | common/rules/*.md) lang="$(basename "$2" .md)" ;; esac
     LANG_KEY="$lang" M="$1" yq -r '.languages[strenv(LANG_KEY)][strenv(M)].limit // .thresholds[strenv(M)]' "$THRESHOLDS"
 }
 
@@ -40,7 +41,7 @@ quotes() { # metric
         file_lines)     re='File (size|length): ?<= ?[0-9]+|files under [0-9]+ lines|\| 파일 (길이|크기) \| (≤ ?)?[0-9]+줄|파일 ≤ ?[0-9]+줄|파일은 가능하면 [0-9]+줄' ;;
         coverage)       re='Coverage: ?>= ?[0-9]+%|커버리지 ≥ ?[0-9]+%|\| (테스트 )?커버리지 \| (≥ ?)?[0-9]+%|at least [0-9]+% meaningful coverage|Minimum [0-9]+% line coverage|커버리지를 측정하고 [0-9]+%|[0-9]+% 커버리지|^\| Unit \|.*\| [0-9]+%\+ \|' ;;
     esac
-    (cd "$REPO_ROOT" && git grep -noE "$re" -- "${DOCS[@]}") | sed -E 's/^([^:]+:[0-9]+):(.*[^0-9])?([0-9]+)[^0-9]*$/\1:\3/'
+    (cd "$PROJECT_ROOT" && git grep -noE "$re" -- "${DOCS[@]}") | sed -E 's/^([^:]+:[0-9]+):(.*[^0-9])?([0-9]+)[^0-9]*$/\1:\3/'
 }
 
 @test "docs: 규칙·안내 문서의 품질 수치(복잡도·함수·파일·커버리지)가 정본 common/quality-thresholds.yaml 과 같다" {
