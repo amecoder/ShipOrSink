@@ -40,7 +40,8 @@ ts_project() { # [sed-expr]
     echo "$d"
 }
 
-ts_rc() { (cd "$1" && "$TS_TOOLS_DIR/node_modules/.bin/vitest" run --root . 2>&1); }
+# NO_COLOR: vitest colors its summary on GitHub Actions, which breaks the plain-text grep on "Tests  3 passed"
+ts_rc() { (cd "$1" && NO_COLOR=1 "$TS_TOOLS_DIR/node_modules/.bin/vitest" run --root . 2>&1); }
 
 require_ts() {
     if [ -n "${TS_TOOLS_DIR:-}" ] && [ -f "$TS_TOOLS_DIR/node_modules/fast-check/package.json" ]; then return 0; fi

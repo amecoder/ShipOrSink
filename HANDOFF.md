@@ -40,6 +40,10 @@ sos 를 원래 저장소(비공개 dev-standards) 없이 혼자 운영할 수 �
 - `tests/templates.bats` 의 AGENTS.md 한도 테스트에 넣은 `skip "repo AGENTS.md not added yet (PR 3)"` 를 지운다
 - `tests/claims.bats` 의 `DOCS` 는 `REPO_ROOT`(표준 폴더) 기준이라 루트 `CLAUDE.md`·`AGENTS.md` 를 못 본다 — 루트 문서를 대상에 넣고 `QUOTE_COUNT` 를 다시 맞춘다
 
+### 나중에 할 것 (PR 2 첫 CI 에서 나옴)
+- CI bats 잡을 `ubuntu-24.04` 로 고정했다. `ubuntu-latest`(=26.04, 2026-11)에서는 SwiftLint 리눅스 바이너리가 `libxml2.so.2` 를 못 찾고, pytest 단계 2개가 `PYTHONPATH=src` 를 주고도 fixture 패키지를 못 불러왔다(원인 미확인 — pipx 의 격리 실행 추정). 26.04 로 옮기려면 이 둘을 먼저 고친다
+- 같은 이유로 사용자에게 깔리는 CI 템플릿(`common/ci-templates/*.yml`)도 `ubuntu-latest` 라 26.04 에서 같은 문제가 날 수 있다 — 확인 필요
+
 ### 주의
 - 커밋·push·PR 은 사용자가 요청할 때만
 - 원래 저장소 세션의 가드는 다른 저장소 push 를 막는다 — 이 저장소 작업은 이 폴더에서 연 세션에서 한다

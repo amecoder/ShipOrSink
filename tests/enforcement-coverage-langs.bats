@@ -111,7 +111,7 @@ go_change() { # K → dir
     local conv
     conv="$(step_run "$(ci_file go)" "Convert coverage to Cobertura")"
     [ -n "$conv" ] && [ "$conv" != "null" ] || { echo "ci-go.yml: no step \"Convert coverage to Cobertura\""; return 1; }
-    (cd "$d" && GOCOVER_COBERTURA_VERSION="$(yq -r '.env.GOCOVER_COBERTURA_VERSION' "$(ci_file go)")" bash -e -c "$conv" 2>&1) \
+    (cd "$d" && GOCOVER_COBERTURA_VERSION="$(yq -r '.env.GOCOVER_COBERTURA_VERSION' "$(ci_file go)")" bash -e -c "$conv" >&2) \
         || { echo "conversion step failed"; return 1; }
     echo "$d"
 }
