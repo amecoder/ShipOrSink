@@ -5,7 +5,7 @@
 sos 를 원래 저장소(비공개 dev-standards) 없이 혼자 운영할 수 있게 보강한다. 원래 저장소는 프리징된다.
 조사·계획 정본: `docs/reports/2026-11-27_sos-단독-운영-보강-조사.md` — 먼저 읽는다.
 
-**다음: PR 3 머지 → PR 4** — PR 4 는 릴리스 절차·CHANGELOG 규칙·플러그인 버전 올리기(표준이 바뀌었으니 0.1.0 → 다음 버전).
+**다음: PR 4** — 릴리스 절차·CHANGELOG 규칙·플러그인 버전 0.1.0 → 0.2.0(2026-11-27 사용자 결정).
 
 ### 사용자 결정 (2026-11-27)
 - PR 네 개로 나눠 순서대로 진행: 1 설치 안내·설명서 → 2 테스트·CI·협업 장치 → 3 CLAUDE.md·AGENTS.md → 4 유지보수
@@ -21,7 +21,7 @@ sos 를 원래 저장소(비공개 dev-standards) 없이 혼자 운영할 수 �
 |---|---|---|
 | 1 | `feat/standalone-1-install-docs` | ✅ PR #1 머지 (squash 2502d42, 2026-11-27) — 안내 92→0줄, `standards/README.md` 설명서, 이름표·복사 흔적 정리, 테스트 4/4 |
 | 2 | `feat/standalone-2-tests-ci` | ✅ PR #2 머지 (squash dbd909c, 2026-11-27) — 테스트·CI·협업 장치·Renovate·최신성 검사 이식. 첫 Actions 실행에서 bats 9건 실패 → 러너 24.04 고정·Go·TS·Python 테스트 결함 수정 후 16개 체크 전부 통과. Fable 5.2 전수 리뷰 [필수] 2건 반영 |
-| 3 | `feat/standalone-3-agent-docs` | 구현·검증 끝, PR 대기 — 루트 CLAUDE.md(관리 규칙)·AGENTS.md(공통 규칙), 출처 주석 4 → 0, AGENTS 한도 테스트 skip 제거 후 통과, 문서 수치 검사가 루트 문서까지 보게(QUOTE_COUNT 14/16/13/10) |
+| 3 | `feat/standalone-3-agent-docs` | ✅ PR #3 머지 (squash 2fc599e, 2026-11-27) — CI 17개 통과, 루트 CLAUDE.md(관리 규칙)·AGENTS.md(공통 규칙), 출처 주석 4 → 0, AGENTS 한도 테스트 skip 제거 후 통과, 문서 수치 검사가 루트 문서까지 보게(QUOTE_COUNT 14/16/13/10) |
 | 4 | `feat/standalone-4-maintenance` | ⬜ |
 
 ### 원본 파일 가져오기
@@ -34,11 +34,14 @@ sos 를 원래 저장소(비공개 dev-standards) 없이 혼자 운영할 수 �
 - 안내문의 표준 폴더 경로는 `$SOS_STANDARDS` 변수로 쓴다. 값 구하는 법은 `plugins/sos/standards/README.md` 「설치」 한 곳에만 둔다
 - 일부러 남긴 `dev-standards`: `.dev-standards.manifest`, `dev-standards:issue-gate`, Grafana 대시보드 `tags` 값, setup 스킬의 트리거 문구 "dev-standards 적용"
 - 원래 있던 문제 발견: `apply.sh --help` 가 색 코드(`\033[…`)를 81곳에서 글자 그대로 찍는다(unquoted heredoc 을 `cat` 으로 출력). PR 2 에서 테스트와 함께 고친다(2026-11-27 사용자 결정)
-- 플러그인 버전은 0.1.0 그대로 — 버전 올리기는 PR 4 의 릴리스 절차에서 정한다
+- 플러그인 버전은 PR 4 에서 0.2.0 으로 올린다(2026-11-27 사용자 결정)
 
 ### 나중에 할 것 (PR 2 첫 CI 에서 나옴)
 - CI bats 잡을 `ubuntu-24.04` 로 고정했다. `ubuntu-latest`(=26.04, 2026-11)에서는 SwiftLint 리눅스 바이너리가 `libxml2.so.2` 를 못 찾고, pytest 단계 2개가 `PYTHONPATH=src` 를 주고도 fixture 패키지를 못 불러왔다(원인 미확인 — pipx 의 격리 실행 추정). 26.04 로 옮기려면 이 둘을 먼저 고친다
 - 같은 이유로 사용자에게 깔리는 CI 템플릿(`common/ci-templates/*.yml`)도 `ubuntu-latest` 라 26.04 에서 같은 문제가 날 수 있다 — 확인 필요
+
+### 결정 대기
+- 라벨·ruleset 을 GitHub 에 반영할지 — `bash .github/scripts/apply-github-settings.sh --dry-run` 결과부터 본다
 
 ### 주의
 - 커밋·push·PR 은 사용자가 요청할 때만

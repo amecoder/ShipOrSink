@@ -4,6 +4,11 @@
 
 ## 2026-11-27
 
+- **#3** `2fc599e` 문서: CLAUDE.md·AGENTS.md 추가와 출처 주석 정리 (단독 운영 3/4)
+  - 루트 `CLAUDE.md`(저장소 관리 규칙)·`AGENTS.md`(공통 작업 규칙) 추가
+  - 원래 저장소 출처 주석 4곳 제거, AGENTS.md 32 KiB 한도 테스트 skip 해제
+  - 문서 수치 검사(`tests/claims.bats`)가 루트 문서까지 확인
+  - 후속: PR 4 에서 릴리스 절차·CHANGELOG 규칙·플러그인 버전 0.2.0
 - **#2** `dbd909c` 기능: 테스트·CI·협업 장치 이식 (단독 운영 2/4)
   - 원래 저장소 bats 34개 파일·픽스처, CI·PR 검사·보안 리뷰·ai-ready 가드·이슈 폼·라벨·ruleset·CODEOWNERS, Renovate(꺼짐)·주간 최신성 검사, 검사 도구 스크립트·pre-commit 을 옮김 (autopilot 제외, 이 저장소에는 `.claude/`·`.githooks/` 를 깔지 않음)
   - 테스트 루트 변수 분리: `REPO_ROOT` = `plugins/sos/standards`, `PROJECT_ROOT` = 저장소 루트
