@@ -5,6 +5,8 @@
 sos 를 원래 저장소(`amecoder/dev-standards`) 없이 혼자 운영할 수 있게 보강한다. 원래 저장소는 프리징된다.
 조사·계획 정본: `docs/reports/2026-11-27_sos-단독-운영-보강-조사.md` — 먼저 읽는다.
 
+**다음: PR 2** — main 에서 `feat/standalone-2-tests-ci` 를 만들고 시작한다. 시작 전에 아래 「원래 저장소에서 이어 받을 메모」를 읽고, 이식본 bats 실패 수(기준선 93)를 다시 잰다.
+
 ### 사용자 결정 (2026-11-27)
 - PR 네 개로 나눠 순서대로 진행: 1 설치 안내·설명서 → 2 테스트·CI·협업 장치 → 3 CLAUDE.md·AGENTS.md → 4 유지보수
 - `.dev-standards.manifest`·`dev-standards:issue-gate` 같은 프로그램용 이름은 유지, 주석·라벨 이름표만 sos 로
@@ -15,7 +17,7 @@ sos 를 원래 저장소(`amecoder/dev-standards`) 없이 혼자 운영할 수 �
 ### 진행 상태
 | PR | 브랜치 | 상태 |
 |---|---|---|
-| 1 | `feat/standalone-1-install-docs` | PR #1 리뷰·머지 대기 (커밋 6f6f8c2) — 안내 92→0줄, `standards/README.md` 설명서, 이름표·복사 흔적 정리, 테스트 4/4 |
+| 1 | `feat/standalone-1-install-docs` | ✅ PR #1 머지 (squash 2502d42, 2026-11-27) — 안내 92→0줄, `standards/README.md` 설명서, 이름표·복사 흔적 정리, 테스트 4/4 |
 | 2 | `feat/standalone-2-tests-ci` | ⬜ |
 | 3 | `feat/standalone-3-agent-docs` | ⬜ |
 | 4 | `feat/standalone-4-maintenance` | ⬜ |
