@@ -2,7 +2,7 @@
 
 ## ▶ 지금 할 일 (2026-11-27 작성)
 
-sos 를 원래 저장소(`amecoder/dev-standards`) 없이 혼자 운영할 수 있게 보강한다. 원래 저장소는 프리징된다.
+sos 를 원래 저장소(비공개 dev-standards) 없이 혼자 운영할 수 있게 보강한다. 원래 저장소는 프리징된다.
 조사·계획 정본: `docs/reports/2026-11-27_sos-단독-운영-보강-조사.md` — 먼저 읽는다.
 
 **다음: PR 2** — main 에서 `feat/standalone-2-tests-ci` 를 만들고 시작한다. 시작 전에 아래 「원래 저장소에서 이어 받을 메모」를 읽고, 이식본 bats 실패 수(기준선 93)를 다시 잰다.
@@ -25,7 +25,7 @@ sos 를 원래 저장소(`amecoder/dev-standards`) 없이 혼자 운영할 수 �
 | 4 | `feat/standalone-4-maintenance` | ⬜ |
 
 ### 원본 파일 가져오기
-원래 저장소 로컬 경로: `/home/munzhs/workspace/lina/amecoder-dev/dev-standards` (커밋 `3d0eb76` 기준으로 가져온다 — `git -C <경로> show 3d0eb76:<파일>`)
+원래 저장소의 로컬 clone 에서 커밋 `3d0eb76` 기준으로 가져온다 — `git -C <원래 저장소 clone> show 3d0eb76:<파일>`. clone 위치는 이 머신의 작업 폴더에서 찾는다(공개 저장소라 경로를 적지 않는다)
 
 ### 원래 저장소에서 이어 받을 메모
 원래 저장소 `HANDOFF.md` 의 「작업 대기열」(T1·T2 등, 모두 ✅)에 각 작업의 「남은 일」과 「함정」이 있다 — 예: 커버리지 게이트가 Rust·Java·Kotlin·Swift 엔 전체 80% 검사가 없음, 전체 bats 는 `--jobs 8` 로 약 6분, 이 머신에 Gradle·cargo-llvm-cov 없음. PR 2 를 시작하기 전에 읽는다
