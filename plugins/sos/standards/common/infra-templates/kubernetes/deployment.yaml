@@ -5,7 +5,7 @@
 #   sed -e 's/APP_NAME/myapp/g' -e 's/NAMESPACE/platform-prod/g' \
 #       -e 's|IMAGE|registry.example.com/myapp:v1.0.0|g' deployment.yaml
 #
-# dev-standards K8s Rules 준수:
+# sos 표준 K8s Rules 준수:
 #   - 라벨: app, version, environment, team
 #   - resource requests + limits 필수
 #   - liveness/readiness probe 필수
@@ -19,7 +19,7 @@ metadata:
   name: APP_NAME                        # 애플리케이션 이름 (예: myapp-api)
   namespace: NAMESPACE                  # 네임스페이스 (예: platform-prod)
   labels:
-    # dev-standards 필수 라벨 4종
+    # sos 표준 필수 라벨 4종
     app: APP_NAME                       # 애플리케이션 식별자
     version: APP_VERSION                # 버전 (예: v1.0.0)
     environment: ENVIRONMENT            # 환경 (dev, staging, production)

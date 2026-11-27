@@ -1,7 +1,7 @@
 ---
 name: setup
 description: >-
-  Set up a codebase with the bundled dev-standards (lint/format/test configs,
+  Set up a codebase with the bundled sos standards (lint/format/test configs,
   Claude rules and hooks, security templates) through a step-by-step
   conversation that explains every choice before anything is written. Use when
   starting a new project or repo, when the user asks to "셋업", "표준 적용",

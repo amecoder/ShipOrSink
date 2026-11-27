@@ -233,7 +233,7 @@ echo "║               Go 품질 체계 적용 완료                        �
 echo "╠═══════════════════════════════════════════════════════════════╣"
 echo "║  필수 후속 작업:                                              ║"
 echo "║  1. .golangci.yml — 프로젝트에 맞게 린터 설정 조정           ║"
-echo "║  2. Claude 훅·pre-push: dev-standards apply.sh --only hooks ║"
+echo "║  2. Claude 훅·pre-push: sos apply.sh --only hooks         ║"
 echo "║  3. pre-commit run --all-files  (전체 검사)                  ║"
 echo "╠═══════════════════════════════════════════════════════════════╣"
 echo "║  검증:                                                        ║"

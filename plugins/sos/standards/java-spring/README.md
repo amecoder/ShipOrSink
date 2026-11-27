@@ -1,5 +1,7 @@
 # Java / Spring Boot 품질 체계
 
+> 명령의 `$SOS_STANDARDS` 는 sos 표준 폴더 경로다. 값을 구하는 법은 [표준 설명서](../README.md#설치)에 있다. Claude Code 에서는 `/sos:setup` 이 같은 적용을 대화로 해 준다.
+
 ## 포함 도구
 
 | 도구 | 역할 | Kotlin 대응 | Python 대응 |
@@ -15,7 +17,7 @@
 
 ```bash
 cd /path/to/my-java-project
-bash ~/.dev-standards/java-spring/bootstrap.sh
+bash "$SOS_STANDARDS/java-spring/bootstrap.sh"
 ```
 
 ## 수동 적용 (단계별)
@@ -23,8 +25,8 @@ bash ~/.dev-standards/java-spring/bootstrap.sh
 ### 1. quality.gradle.kts 적용
 
 ```bash
-cp ~/.dev-standards/java-spring/templates/quality.gradle.kts .
-cp ~/.dev-standards/java-spring/templates/spotbugs-exclude.xml .
+cp "$SOS_STANDARDS/java-spring/templates/quality.gradle.kts" .
+cp "$SOS_STANDARDS/java-spring/templates/spotbugs-exclude.xml" .
 ```
 
 `quality.gradle.kts` 의 내용을 `build.gradle.kts` 에 **합친다** — `plugins { }` 블록과 `java { toolchain }` 은 기존 것과 하나로 합치고(이미 `sourceCompatibility` 나 다른 toolchain 이 있으면 지운다), 나머지는 그 아래에 붙인다.
@@ -39,7 +41,7 @@ cp ~/.dev-standards/java-spring/templates/spotbugs-exclude.xml .
 ### 2. checkstyle.xml 복사
 
 ```bash
-cp ~/.dev-standards/java-spring/templates/checkstyle.xml .
+cp "$SOS_STANDARDS/java-spring/templates/checkstyle.xml" .
 ```
 
 수정 포인트:
@@ -63,10 +65,10 @@ cp ~/.dev-standards/java-spring/templates/checkstyle.xml .
 ### 3. 나머지 파일 복사
 
 ```bash
-cp ~/.dev-standards/java-spring/templates/.editorconfig .
-cp ~/.dev-standards/java-spring/templates/.pre-commit-config.yaml .
-bash ~/.dev-standards/apply.sh --only hooks --target .     # 공통 Claude Code 훅 + .githooks/pre-push
-bash ~/.dev-standards/apply.sh --only settings --target .  # 팀 공유 .claude/settings.json (있으면 병합)
+cp "$SOS_STANDARDS/java-spring/templates/.editorconfig" .
+cp "$SOS_STANDARDS/java-spring/templates/.pre-commit-config.yaml" .
+bash "$SOS_STANDARDS/apply.sh" --only hooks --target .     # 공통 Claude Code 훅 + .githooks/pre-push
+bash "$SOS_STANDARDS/apply.sh" --only settings --target .  # 팀 공유 .claude/settings.json (있으면 병합)
 ```
 
 ### 4. google-java-format 설치

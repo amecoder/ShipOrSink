@@ -1,5 +1,7 @@
 # Flutter / Dart 품질 체계
 
+> 명령의 `$SOS_STANDARDS` 는 sos 표준 폴더 경로다. 값을 구하는 법은 [표준 설명서](../README.md#설치)에 있다. Claude Code 에서는 `/sos:setup` 이 같은 적용을 대화로 해 준다.
+
 ## 포함 도구
 
 | 도구 | 역할 | Python 대응 | TypeScript 대응 |
@@ -16,7 +18,7 @@
 
 ```bash
 cd /path/to/my-flutter-project
-bash ~/.dev-standards/flutter-dart/bootstrap.sh
+bash "$SOS_STANDARDS/flutter-dart/bootstrap.sh"
 ```
 
 ## 수동 적용 (단계별)
@@ -24,7 +26,7 @@ bash ~/.dev-standards/flutter-dart/bootstrap.sh
 ### 1. analysis_options.yaml 복사
 
 ```bash
-cp ~/.dev-standards/flutter-dart/templates/analysis_options.yaml .
+cp "$SOS_STANDARDS/flutter-dart/templates/analysis_options.yaml" .
 ```
 
 `pubspec.yaml`에 very_good_analysis 추가:
@@ -37,7 +39,7 @@ dev_dependencies:
 ### 2. pre-commit 설정 복사
 
 ```bash
-cp ~/.dev-standards/flutter-dart/templates/.pre-commit-config.yaml .
+cp "$SOS_STANDARDS/flutter-dart/templates/.pre-commit-config.yaml" .
 pip install pre-commit detect-secrets
 pre-commit install
 ```
@@ -45,8 +47,8 @@ pre-commit install
 ### 3. Claude Code 훅 설정
 
 ```bash
-bash ~/.dev-standards/apply.sh --only hooks --target .     # 공통 Claude Code 훅 + .githooks/pre-push
-bash ~/.dev-standards/apply.sh --only settings --target .  # 팀 공유 .claude/settings.json (있으면 병합)
+bash "$SOS_STANDARDS/apply.sh" --only hooks --target .     # 공통 Claude Code 훅 + .githooks/pre-push
+bash "$SOS_STANDARDS/apply.sh" --only settings --target .  # 팀 공유 .claude/settings.json (있으면 병합)
 ```
 
 > `permissions.allow` 목록을 프로젝트에 맞게 수정하세요.

@@ -1,4 +1,4 @@
-title = "dev-standards gitleaks config"
+title = "sos standards gitleaks config"
 
 [extend]
 useDefault = true

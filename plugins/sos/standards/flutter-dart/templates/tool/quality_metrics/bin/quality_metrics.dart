@@ -1,4 +1,4 @@
-// Per-function cyclomatic complexity and length gate (dev-standards).
+// Per-function cyclomatic complexity and length gate (sos standards).
 //
 // Usage (pre-commit hook `dart-metrics`):
 //   dart --packages=tool/quality_metrics/.dart_tool/package_config.json \

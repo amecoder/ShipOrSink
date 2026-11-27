@@ -1,5 +1,7 @@
 # TypeScript / React / Next.js 품질 체계
 
+> 명령의 `$SOS_STANDARDS` 는 sos 표준 폴더 경로다. 값을 구하는 법은 [표준 설명서](../README.md#설치)에 있다. Claude Code 에서는 `/sos:setup` 이 같은 적용을 대화로 해 준다.
+
 ## 포함 도구
 
 | 도구 | 역할 | Python 대응 | Kotlin 대응 |
@@ -18,7 +20,7 @@
 
 ```bash
 cd /path/to/my-react-project
-bash ~/.dev-standards/typescript-react/bootstrap.sh
+bash "$SOS_STANDARDS/typescript-react/bootstrap.sh"
 ```
 
 ## 수동 적용 (단계별)
@@ -26,14 +28,14 @@ bash ~/.dev-standards/typescript-react/bootstrap.sh
 ### 1. ESLint Flat Config 복사
 
 ```bash
-cp ~/.dev-standards/typescript-react/templates/eslint.config.mjs .
+cp "$SOS_STANDARDS/typescript-react/templates/eslint.config.mjs" .
 ```
 
 필요 패키지 설치 — 버전은 `templates/dev-dependencies.txt` 에 고정돼 있다(`bootstrap.sh` 가 그대로 설치한다). 버전 없이 받으면 eslint 10 과 `eslint-plugin-jsx-a11y`(eslint ≤9 지원)가 충돌해 `ERESOLVE` 로 실패한다:
 ```bash
-grep -vE '^#|^$| (tailwind|if-missing)$' ~/.dev-standards/typescript-react/templates/dev-dependencies.txt | xargs npm install -D -E
+grep -vE '^#|^$| (tailwind|if-missing)$' "$SOS_STANDARDS/typescript-react/templates/dev-dependencies.txt" | xargs npm install -D -E
 # TypeScript 가 아직 없는 프로젝트만 — 이미 있으면 그 버전을 그대로 둔다 (bootstrap 과 같은 정책)
-grep ' if-missing$' ~/.dev-standards/typescript-react/templates/dev-dependencies.txt | cut -d' ' -f1 | xargs npm install -D -E
+grep ' if-missing$' "$SOS_STANDARDS/typescript-react/templates/dev-dependencies.txt" | cut -d' ' -f1 | xargs npm install -D -E
 ```
 
 `complexity` · `max-lines-per-function` · `max-lines` 는 `"error"` 다 — `"warn"` 이면 `eslint .` 가 exit 0 으로 끝나 CI 가 막지 않는다. 네 수치의 정본은 `common/quality-thresholds.yaml`, 실제로 막히는지는 `tests/enforcement.bats` 가 확인한다. 이 설정은 Next.js 프로젝트용이다(`eslint-config-next` 가 `next` 패키지의 파서를 불러온다). 테스트 파일(`*.test.*` · `*.spec.*` · `tests/` · `e2e/`)은 함수 길이 규칙에서 빠진다.
@@ -43,7 +45,7 @@ grep ' if-missing$' ~/.dev-standards/typescript-react/templates/dev-dependencies
 ### 2. tsconfig.json에 품질 옵션 병합
 
 ```bash
-cat ~/.dev-standards/typescript-react/templates/tsconfig-quality.json
+cat "$SOS_STANDARDS/typescript-react/templates/tsconfig-quality.json"
 ```
 
 기존 `tsconfig.json`의 `compilerOptions`에 아래 항목을 병합:
@@ -56,7 +58,7 @@ cat ~/.dev-standards/typescript-react/templates/tsconfig-quality.json
 ### 3. Prettier 설정 복사
 
 ```bash
-cp ~/.dev-standards/typescript-react/templates/.prettierrc .
+cp "$SOS_STANDARDS/typescript-react/templates/.prettierrc" .
 ```
 
 > **참고**: `prettier-plugin-tailwindcss`는 Tailwind CSS를 사용하는 프로젝트에서만 필요합니다.
@@ -70,7 +72,7 @@ cp ~/.dev-standards/typescript-react/templates/.prettierrc .
 ### 4. Vitest 설정 복사
 
 ```bash
-cp ~/.dev-standards/typescript-react/templates/vitest.config.ts .
+cp "$SOS_STANDARDS/typescript-react/templates/vitest.config.ts" .
 ```
 
 필요 패키지 설치:
@@ -107,8 +109,8 @@ echo "npx lint-staged" > .husky/pre-commit
 ### 6. Claude Code 훅 설정
 
 ```bash
-bash ~/.dev-standards/apply.sh --only hooks --target .     # 공통 Claude Code 훅 + .githooks/pre-push
-bash ~/.dev-standards/apply.sh --only settings --target .  # 팀 공유 .claude/settings.json (있으면 병합)
+bash "$SOS_STANDARDS/apply.sh" --only hooks --target .     # 공통 Claude Code 훅 + .githooks/pre-push
+bash "$SOS_STANDARDS/apply.sh" --only settings --target .  # 팀 공유 .claude/settings.json (있으면 병합)
 ```
 
 > `permissions.allow` 목록을 프로젝트에 맞게 수정하세요.
@@ -116,7 +118,7 @@ bash ~/.dev-standards/apply.sh --only settings --target .  # 팀 공유 .claude/
 ### 7. dependency-cruiser 설정 복사
 
 ```bash
-cp ~/.dev-standards/typescript-react/templates/.dependency-cruiser.cjs .
+cp "$SOS_STANDARDS/typescript-react/templates/.dependency-cruiser.cjs" .
 npx --no depcruise . --config .dependency-cruiser.cjs   # CI lint 잡 "Dependency rules" 와 같은 명령
 ```
 

@@ -1,5 +1,7 @@
 # C# / .NET 품질 체계
 
+> 명령의 `$SOS_STANDARDS` 는 sos 표준 폴더 경로다. 값을 구하는 법은 [표준 설명서](../README.md#설치)에 있다. Claude Code 에서는 `/sos:setup` 이 같은 적용을 대화로 해 준다.
+
 ## 포함 도구
 
 | 도구 | 역할 | Java 대응 | Go 대응 |
@@ -18,7 +20,7 @@
 
 ```bash
 cd /path/to/my-dotnet-project
-bash ~/.dev-standards/csharp-dotnet/bootstrap.sh
+bash "$SOS_STANDARDS/csharp-dotnet/bootstrap.sh"
 ```
 
 ## 수동 적용 (단계별)
@@ -26,7 +28,7 @@ bash ~/.dev-standards/csharp-dotnet/bootstrap.sh
 ### 1. global.json 복사 (SDK 버전 고정)
 
 ```bash
-cp ~/.dev-standards/csharp-dotnet/templates/global.json .
+cp "$SOS_STANDARDS/csharp-dotnet/templates/global.json" .
 ```
 
 수정 포인트:
@@ -36,7 +38,7 @@ cp ~/.dev-standards/csharp-dotnet/templates/global.json .
 ### 2. Directory.Build.props 복사 (솔루션 전체에 분석기 적용)
 
 ```bash
-cp ~/.dev-standards/csharp-dotnet/templates/Directory.Build.props .
+cp "$SOS_STANDARDS/csharp-dotnet/templates/Directory.Build.props" .
 ```
 
 이 파일은 **같은 디렉토리와 모든 하위 .csproj에 자동으로 적용**된다. 모든 프로젝트에 다음을 강제:
@@ -50,15 +52,15 @@ cp ~/.dev-standards/csharp-dotnet/templates/Directory.Build.props .
 ### 3. .editorconfig 복사
 
 ```bash
-cp ~/.dev-standards/csharp-dotnet/templates/.editorconfig .
+cp "$SOS_STANDARDS/csharp-dotnet/templates/.editorconfig" .
 ```
 
 ### 4. stylecop.json · SonarLint.xml 복사
 
 ```bash
-cp ~/.dev-standards/csharp-dotnet/templates/stylecop.json .
+cp "$SOS_STANDARDS/csharp-dotnet/templates/stylecop.json" .
 # companyName 수정 필요
-cp ~/.dev-standards/csharp-dotnet/templates/SonarLint.xml .
+cp "$SOS_STANDARDS/csharp-dotnet/templates/SonarLint.xml" .
 ```
 
 `SonarLint.xml` 은 Sonar 규칙의 **숫자**(S1541 복잡도 15 · S138 함수 50줄)를 넘긴다. `.editorconfig` 는 severity 만 정할 수 있어서,
@@ -75,14 +77,14 @@ cp ~/.dev-standards/csharp-dotnet/templates/SonarLint.xml .
 ### 5. .pre-commit-config.yaml 복사
 
 ```bash
-cp ~/.dev-standards/csharp-dotnet/templates/.pre-commit-config.yaml .
+cp "$SOS_STANDARDS/csharp-dotnet/templates/.pre-commit-config.yaml" .
 ```
 
 ### 6. Claude Code 훅·설정 (공통)
 
 ```bash
-bash ~/.dev-standards/apply.sh --only hooks --target .     # 공통 Claude Code 훅 + .githooks/pre-push
-bash ~/.dev-standards/apply.sh --only settings --target .  # 팀 공유 .claude/settings.json (있으면 병합)
+bash "$SOS_STANDARDS/apply.sh" --only hooks --target .     # 공통 Claude Code 훅 + .githooks/pre-push
+bash "$SOS_STANDARDS/apply.sh" --only settings --target .  # 팀 공유 .claude/settings.json (있으면 병합)
 ```
 
 ### 7. detect-secrets baseline + pre-commit 설치

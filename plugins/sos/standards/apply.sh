@@ -1,21 +1,22 @@
 #!/usr/bin/env bash
 # ╔══════════════════════════════════════════════════════════════════════════╗
-# ║  apply.sh — dev-standards 팀 품질 체계 적용 CLI                         ║
+# ║  apply.sh — sos 표준(린터·포매터·Claude Code 설정·가이드) 적용 CLI      ║
 # ║                                                                        ║
-# ║  다른 프로젝트에서 dev-standards의 린터, 포매터, Claude Code 설정,       ║
-# ║  가이드 문서를 팀 규모에 맞게 골라서 적용하는 도구.                      ║
+# ║  다른 프로젝트에 sos 플러그인에 들어 있는 품질 표준을 팀 규모에 맞게     ║
+# ║  골라서 적용하는 도구. Claude Code 안에서는 /sos:setup 이 이걸 부른다.  ║
 # ║                                                                        ║
 # ║  사전 요구사항:                                                         ║
-# ║    - git clone https://github.com/amecoder/dev-standards ~/.dev-standards║
+# ║    - sos 플러그인 설치 또는 ShipOrSink 저장소 clone                     ║
+# ║      (SOS_STANDARDS 값 구하는 법: 이 폴더의 README.md 「설치」)         ║
 # ║    - bash, jq (Claude Code Hooks에 필요)                               ║
 # ║                                                                        ║
 # ║  기본 사용법:                                                           ║
 # ║    cd /path/to/my-project                                              ║
-# ║    bash ~/.dev-standards/apply.sh                    # 대화형 (레벨 선택)║
-# ║    bash ~/.dev-standards/apply.sh --level slim       # 1~3명 소규모 팀  ║
-# ║    bash ~/.dev-standards/apply.sh --level standard   # 4~10명 팀        ║
-# ║    bash ~/.dev-standards/apply.sh --level full       # 11~30명 팀       ║
-# ║    bash ~/.dev-standards/apply.sh --level enterprise # 30명+ 대규모     ║
+# ║    bash "$SOS_STANDARDS/apply.sh"                    # 대화형 (레벨 선택)║
+# ║    bash "$SOS_STANDARDS/apply.sh" --level slim       # 1~3명 소규모 팀  ║
+# ║    bash "$SOS_STANDARDS/apply.sh" --level standard   # 4~10명 팀        ║
+# ║    bash "$SOS_STANDARDS/apply.sh" --level full       # 11~30명 팀       ║
+# ║    bash "$SOS_STANDARDS/apply.sh" --level enterprise # 30명+ 대규모     ║
 # ║                                                                        ║
 # ║  선택적 적용:                                                           ║
 # ║    bash apply.sh --only rules                        # Rules만          ║
@@ -62,11 +63,11 @@ show_help() {
     cat << 'HELPEOF'
 
 ╔══════════════════════════════════════════════════════════════╗
-║              dev-standards apply.sh — 도움말                ║
+║              sos 표준 apply.sh — 도움말                     ║
 ╚══════════════════════════════════════════════════════════════╝
 
 사용법:
-  bash ~/.dev-standards/apply.sh [옵션]
+  bash "$SOS_STANDARDS/apply.sh" [옵션]
 
 옵션:
   --level <레벨>     팀 규모별 적용 레벨 (아래 상세 설명 참고)
@@ -207,33 +208,33 @@ ${BOLD}═══ 사용 예시 ═══${NC}
 
   # 소규모 팀, Python 프로젝트
   ${DIM}$ cd my-python-api${NC}
-  ${DIM}$ bash ~/.dev-standards/apply.sh --level slim${NC}
+  ${DIM}$ bash "\$SOS_STANDARDS/apply.sh" --level slim${NC}
 
   # 중규모 팀, TypeScript 프로젝트
   ${DIM}$ cd my-nextjs-app${NC}
-  ${DIM}$ bash ~/.dev-standards/apply.sh --level standard --lang typescript-react${NC}
+  ${DIM}$ bash "\$SOS_STANDARDS/apply.sh" --level standard --lang typescript-react${NC}
 
   # Docker + K8s + Terraform Rules만 추가 (인프라 엔지니어)
-  ${DIM}$ bash ~/.dev-standards/apply.sh --only rules --pick "docker,kubernetes,terraform"${NC}
+  ${DIM}$ bash "\$SOS_STANDARDS/apply.sh" --only rules --pick "docker,kubernetes,terraform"${NC}
 
   # REST API 가이드만 복사
-  ${DIM}$ bash ~/.dev-standards/apply.sh --only guides --pick "rest-api-design"${NC}
+  ${DIM}$ bash "\$SOS_STANDARDS/apply.sh" --only guides --pick "rest-api-design"${NC}
 
   # 회의록 스캐폴드 (meetings/ 디렉토리 + 용어집 + 템플릿)
-  ${DIM}$ bash ~/.dev-standards/apply.sh --only meetings${NC}
+  ${DIM}$ bash "\$SOS_STANDARDS/apply.sh" --only meetings${NC}
 
   # Hooks만 추가 (이미 린터 설정이 있는 프로젝트)
-  ${DIM}$ bash ~/.dev-standards/apply.sh --only hooks${NC}
+  ${DIM}$ bash "\$SOS_STANDARDS/apply.sh" --only hooks${NC}
 
   # GitHub 협업 인프라만 (이슈 폼, 라벨, ruleset, PR 체크) → 이후 설정 반영
-  ${DIM}$ bash ~/.dev-standards/apply.sh --only github${NC}
+  ${DIM}$ bash "\$SOS_STANDARDS/apply.sh" --only github${NC}
   ${DIM}$ bash .github/scripts/apply-github-settings.sh${NC}
 
   # 적용 전 미리보기 (파일 변경 없음)
-  ${DIM}$ bash ~/.dev-standards/apply.sh --level full --dry-run${NC}
+  ${DIM}$ bash "\$SOS_STANDARDS/apply.sh" --level full --dry-run${NC}
 
   # 가이드 문서를 프로젝트에 포함하고 싶을 때
-  ${DIM}$ bash ~/.dev-standards/apply.sh --level standard --include-docs${NC}
+  ${DIM}$ bash "\$SOS_STANDARDS/apply.sh" --level standard --include-docs${NC}
 
 ${BOLD}═══ 적용 가능한 Rules 목록 (--pick) ═══${NC}
 
@@ -313,7 +314,7 @@ ${BOLD}═══ FAQ ═══${NC}
 
   ${BOLD}Q: 특정 Rule을 커스터마이징하고 싶으면?${NC}
   A: .claude/rules/ 에 복사된 파일을 직접 수정하면 된다.
-     dev-standards를 다시 적용해도 수정된 파일은 덮어쓰지 않는다.
+     sos 표준을 다시 적용해도 수정된 파일은 덮어쓰지 않는다.
 
 EOF
 }
@@ -421,7 +422,7 @@ manifest_set() {
     m="$(manifest_path)"
     tmp="$m.tmp.$$"
     {
-        printf '# dev-standards 적용 기록 — apply.sh --check / --diff 가 읽는다. 직접 고치지 않는다.\n'
+        printf '# sos 표준 적용 기록 — apply.sh --check / --diff 가 읽는다. 직접 고치지 않는다.\n'
         printf '# source_commit=%s\n' "$(git -C "$SCRIPT_DIR" rev-parse --short HEAD 2>/dev/null || echo unknown)"
         [[ -f "$m" ]] && awk -F'\t' -v t="$1" '!/^#/ && $1!=t' "$m"
         printf '%s\t%s\t%s\n' "$1" "$2" "$3"
@@ -1654,7 +1655,7 @@ show_level_summary() {
 [[ -n "$MODE" ]] && run_check "$MODE"   # --check / --diff 는 아무것도 쓰지 않고 끝난다
 echo ""
 echo -e "${CYAN}╔══════════════════════════════════════╗${NC}"
-echo -e "${CYAN}║     dev-standards apply              ║${NC}"
+echo -e "${CYAN}║     sos standards apply              ║${NC}"
 echo -e "${CYAN}╠══════════════════════════════════════╣${NC}"
 echo -e "${CYAN}║${NC}  레벨  : ${GREEN}${LEVEL:-대화형 선택}${NC}"
 echo -e "${CYAN}║${NC}  언어  : ${GREEN}${TARGET_LANG}${NC}"
@@ -1782,10 +1783,10 @@ echo "  .claude/settings.json    팀 권한 설정"
 echo ""
 echo -e "${BOLD}다음 단계:${NC}"
 echo "  1. .claude/settings.json에서 팀에 맞게 권한 조정"
-echo "  2. git add .claude/ .github/ docs/ && git commit -m '기능: dev-standards 적용'"
+echo "  2. git add .claude/ .github/ docs/ && git commit -m '기능: sos 표준 적용'"
 [[ "$LEVEL" != "slim" ]] && echo "  3. 라벨·브랜치 보호를 GitHub 에 반영: bash .github/scripts/apply-github-settings.sh"
 echo "  4. 팀원에게 공유: git pull 후 Claude Code 실행"
 echo ""
-echo -e "${DIM}도움말: bash ~/.dev-standards/apply.sh --help${NC}"
-echo -e "${DIM}업데이트: cd ~/.dev-standards && git pull${NC}"
+echo -e "${DIM}도움말: bash ${SCRIPT_DIR}/apply.sh --help${NC}"
+echo -e "${DIM}업데이트: claude plugin marketplace update shiporsink && claude plugin update sos@shiporsink${NC}"
 echo ""

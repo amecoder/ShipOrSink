@@ -1,4 +1,4 @@
-// Line coverage gate for an lcov file (dev-standards).
+// Line coverage gate for an lcov file (sos standards).
 //
 // Usage (pre-push hook `flutter-test`, after `flutter test --coverage`):
 //   dart tool/quality_metrics/bin/coverage_check.dart coverage/lcov.info 80

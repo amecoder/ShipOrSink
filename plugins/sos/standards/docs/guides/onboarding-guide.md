@@ -46,7 +46,7 @@ gantt
 
 ### 개발 환경
 - [ ] 레포지토리 클론
-- [ ] `dev-standards` 적용: `bash ~/.dev-standards/bootstrap.sh`
+- [ ] sos 표준 적용: Claude Code 에서 `/sos:setup` (셸에서는 `bash "$SOS_STANDARDS/bootstrap.sh"`)
 - [ ] 로컬 빌드 + 테스트 성공 확인
 - [ ] IDE 설정 (린터, 포매터, 플러그인)
 - [ ] Docker / K8s 로컬 환경 구동

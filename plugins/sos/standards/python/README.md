@@ -1,10 +1,12 @@
 # Python / FastAPI 품질 체계
 
+> 명령의 `$SOS_STANDARDS` 는 sos 표준 폴더 경로다. 값을 구하는 법은 [표준 설명서](../README.md#설치)에 있다. Claude Code 에서는 `/sos:setup` 이 같은 적용을 대화로 해 준다.
+
 ## 자동 적용
 
 ```bash
 cd /path/to/my-python-project
-bash ~/.dev-standards/python/bootstrap.sh
+bash "$SOS_STANDARDS/python/bootstrap.sh"
 ```
 
 ## 수동 적용 (단계별)
@@ -13,7 +15,7 @@ bash ~/.dev-standards/python/bootstrap.sh
 
 ```bash
 # 내용 확인 후 수동으로 pyproject.toml에 붙여넣기
-cat ~/.dev-standards/python/templates/pyproject-quality.toml
+cat "$SOS_STANDARDS/python/templates/pyproject-quality.toml"
 ```
 
 수정 포인트:
@@ -25,7 +27,7 @@ cat ~/.dev-standards/python/templates/pyproject-quality.toml
 ### 2. .pre-commit-config.yaml 복사
 
 ```bash
-cp ~/.dev-standards/python/templates/.pre-commit-config.yaml .
+cp "$SOS_STANDARDS/python/templates/.pre-commit-config.yaml" .
 
 # ruff 버전 확인 후 rev 수정
 ruff --version
@@ -38,8 +40,8 @@ ruff --version
 ### 3. Claude Code 훅·설정 (공통)
 
 ```bash
-bash ~/.dev-standards/apply.sh --only hooks --target .     # 공통 Claude Code 훅 + .githooks/pre-push
-bash ~/.dev-standards/apply.sh --only settings --target .  # 팀 공유 .claude/settings.json (있으면 병합)
+bash "$SOS_STANDARDS/apply.sh" --only hooks --target .     # 공통 Claude Code 훅 + .githooks/pre-push
+bash "$SOS_STANDARDS/apply.sh" --only settings --target .  # 팀 공유 .claude/settings.json (있으면 병합)
 ```
 
 ### 4. detect-secrets baseline + pre-commit 설치

@@ -182,7 +182,7 @@ Pact 는 "소비자가 실제로 쓰는 부분"을 검증한다. 그보다 싼 �
 CI 템플릿: `common/ci-templates/ci-api-contract.yml`(full 레벨 권장 — 여러 팀·외부 클라이언트가 API 를 쓸 때). 실행 결과 판정: `tests/enforcement-api-contract.bats`.
 
 ```bash
-cp ~/.dev-standards/common/ci-templates/ci-api-contract.yml .github/workflows/api-contract.yml
+cp "$SOS_STANDARDS/common/ci-templates/ci-api-contract.yml" .github/workflows/api-contract.yml
 # env 의 OPENAPI_SPECS(공백으로 여러 개) · PROTO_DIR 를 프로젝트 경로로 바꾸고, 안 쓰는 잡은 지운다
 ```
 
