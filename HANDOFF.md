@@ -5,7 +5,7 @@
 sos 를 원래 저장소(비공개 dev-standards) 없이 혼자 운영할 수 있게 보강한다. 원래 저장소는 프리징된다.
 조사·계획 정본: `docs/reports/2026-11-27_sos-단독-운영-보강-조사.md` — 먼저 읽는다.
 
-**다음: PR 2** — main 에서 `feat/standalone-2-tests-ci` 를 만들고 시작한다. 시작 전에 아래 「원래 저장소에서 이어 받을 메모」를 읽고, 이식본 bats 실패 수(기준선 93)를 다시 잰다.
+**다음: PR 3** — main 에서 `feat/standalone-3-agent-docs` 를 만들고 시작한다. 아래 「PR 3 이 이어받을 것」부터 본다.
 
 ### 사용자 결정 (2026-11-27)
 - PR 네 개로 나눠 순서대로 진행: 1 설치 안내·설명서 → 2 테스트·CI·협업 장치 → 3 CLAUDE.md·AGENTS.md → 4 유지보수
@@ -20,7 +20,7 @@ sos 를 원래 저장소(비공개 dev-standards) 없이 혼자 운영할 수 �
 | PR | 브랜치 | 상태 |
 |---|---|---|
 | 1 | `feat/standalone-1-install-docs` | ✅ PR #1 머지 (squash 2502d42, 2026-11-27) — 안내 92→0줄, `standards/README.md` 설명서, 이름표·복사 흔적 정리, 테스트 4/4 |
-| 2 | `feat/standalone-2-tests-ci` | 구현·검증 끝, 커밋 전 — 운영 파일·Renovate·최신성 검사 이식, 테스트 루트 변수 분리(`REPO_ROOT`=표준 · `PROJECT_ROOT`=저장소), `--help` 색 코드 수정. bats 실패 97 → 63 (샌드박스): 도구 다운로드 막힘 61 + 샌드박스 gh 1(밖에서 통과) + AGENTS 한도 1(PR 3) · pins 5/5 |
+| 2 | `feat/standalone-2-tests-ci` | ✅ PR #2 머지 (squash dbd909c, 2026-11-27) — 테스트·CI·협업 장치·Renovate·최신성 검사 이식. 첫 Actions 실행에서 bats 9건 실패 → 러너 24.04 고정·Go·TS·Python 테스트 결함 수정 후 16개 체크 전부 통과. Fable 5.2 전수 리뷰 [필수] 2건 반영 |
 | 3 | `feat/standalone-3-agent-docs` | ⬜ |
 | 4 | `feat/standalone-4-maintenance` | ⬜ |
 
