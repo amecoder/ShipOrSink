@@ -1,0 +1,10 @@
+# shellcheck 저장소 설정 — CI · pre-commit · tests/lint.bats 가 같은 기준을 쓴다
+# -x : source 된 파일을 따라간다 (hooks 의 receipt-lib.sh)
+external-sources=true
+
+# SC2015 (info) `A && B || C` — bootstrap 스크립트의 `cmd && success "…" || warn "…"` 관용구.
+# success/warn 은 echo 뿐이라 실패하지 않으므로 C 가 잘못 실행될 경로가 없다.
+disable=SC2015
+
+# SC2016 (info) 작은따옴표 안의 $ — node -e '…' 인라인 스크립트의 JS 템플릿 문자열
+disable=SC2016

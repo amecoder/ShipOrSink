@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
 # H2: the test-lock hook blocks test edits while locked, unless a human-approved ledger row exists.
+# shellcheck source=SCRIPTDIR/_lib.sh
 . "$(dirname "$0")/_lib.sh"
 HOOK="$PLUGIN/hooks/test-lock.py"
 [ -f "$HOOK" ] || { echo "  FAIL $HOOK missing: $HOOK"; echo "PASS=0 FAIL=1"; exit 1; }

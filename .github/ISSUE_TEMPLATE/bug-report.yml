@@ -1,0 +1,71 @@
+# 버그 리포트 이슈 폼 — 수정은 "실패하는 테스트"에서 시작한다 (tdd.md Regression Fixes)
+name: Bug Report
+description: 재현 가능한 버그 — 수정 PR 은 회귀 테스트를 먼저 추가한다
+title: "[Bug] "
+labels: ["bug"]
+body:
+  - type: textarea
+    id: symptom
+    attributes:
+      label: 증상
+      description: 무엇이 잘못 보이거나 동작하는가 (에러 메시지는 그대로)
+    validations:
+      required: true
+
+  - type: textarea
+    id: steps
+    attributes:
+      label: 재현 절차
+      placeholder: |
+        1. 로그인 화면에서 잘못된 비밀번호 입력
+        2. 재시도 버튼 클릭
+        3. 화면이 멈춤
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: 기대 동작
+    validations:
+      required: true
+
+  - type: textarea
+    id: actual
+    attributes:
+      label: 실제 동작
+    validations:
+      required: true
+
+  - type: input
+    id: env
+    attributes:
+      label: 환경
+      placeholder: 버전 v1.4.2 · Chrome 140 · macOS 15 · 프로덕션/스테이징
+    validations:
+      required: true
+
+  - type: textarea
+    id: logs
+    attributes:
+      label: 로그 · 스크린샷
+      description: 시크릿·개인정보는 지우고 붙여 넣는다
+      render: text
+
+  - type: input
+    id: regression-test
+    attributes:
+      label: 회귀 테스트 위치 (제안)
+      description: 이 버그를 잡을 테스트가 들어갈 파일 — 수정 PR 은 이 테스트가 먼저 실패하는 것을 보여야 한다
+      placeholder: tests/auth/test_login_retry.py
+
+  - type: dropdown
+    id: severity
+    attributes:
+      label: 심각도
+      options:
+        - S1 — 서비스 불가 / 데이터 손상 / 보안
+        - S2 — 핵심 기능 오동작, 우회 불가
+        - S3 — 우회 가능
+        - S4 — 사소함
+      default: 2

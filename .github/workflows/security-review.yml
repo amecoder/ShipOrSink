@@ -1,0 +1,135 @@
+# ============================================================================
+# 보안 리뷰 게이트 워크플로우 템플릿 — Semgrep + Gitleaks + Trivy
+# ============================================================================
+# 사용법: apply.sh --only github 가 .github/workflows/security-review.yml 로 배치한다.
+#   세 스캐너를 병렬로 돌리고, 집계 job `security-review` 하나가 성패를 대표한다.
+#   ruleset 필수 상태 체크에는 `security-review` 만 등록한다 (.github/rulesets/main-protection.json).
+#
+# 스캐너 (전부 오픈소스 — private 저장소도 무료):
+#   semgrep  : SAST. 레지스트리 p/default + p/secrets + 저장소의 .semgrep.yml (있으면)
+#   gitleaks : 커밋 히스토리의 시크릿. 릴리스 바이너리를 받아 sha256 을 대조한 뒤 실행 (파이프 실행 금지)
+#   trivy    : 의존성 취약점 · IaC 설정 오류 · 시크릿 (fs 스캔, CRITICAL/HIGH 만 실패)
+#
+# 액션은 SHA 로 고정한다 (태그는 옮겨질 수 있다). 갱신은 Dependabot github-actions 생태계가 PR 로 올린다.
+# ============================================================================
+
+name: Security Review
+
+# `paths:` 필터를 넣지 않는다 — 필터로 워크플로 전체가 skip 되면 필수 체크가 "Pending" 으로 남아
+# 머지가 영원히 막힌다 (GitHub 공식 트러블슈팅). 문서만 바뀐 PR 도 세 스캐너를 돌린다 (각 20분 상한).
+# 오탐 처리: .semgrepignore · .gitleaksignore · .trivyignore 에 "사유 + 만료일" 주석과 함께 적는다.
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  # ──────────────────────────────────────────────────────────────────────────
+  # Semgrep — 정적 분석 (SAST)
+  # ──────────────────────────────────────────────────────────────────────────
+  semgrep:
+    name: semgrep
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    container:
+      # 태그 + 다이제스트 핀 — 태그가 재발행돼도 같은 이미지만 실행된다.
+      # 갱신: curl -fsSL https://hub.docker.com/v2/repositories/semgrep/semgrep/tags/<tag> | jq -r .digest
+      image: semgrep/semgrep:1.177.0@sha256:acaac22ffc7b7cc5926de0751b223bce0b2491c33d18422fa72f632c78d81198
+    steps:
+      - name: Checkout
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          persist-credentials: false
+
+      - name: Semgrep scan
+        run: |
+          configs="--config p/default --config p/secrets"
+          if [ -f .semgrep.yml ]; then configs="$configs --config .semgrep.yml"; fi
+          # shellcheck disable=SC2086
+          semgrep scan $configs --error --metrics=off --severity WARNING --severity ERROR
+
+  # ──────────────────────────────────────────────────────────────────────────
+  # Gitleaks — 커밋 히스토리 시크릿 스캔
+  # ──────────────────────────────────────────────────────────────────────────
+  gitleaks:
+    name: gitleaks
+    runs-on: ubuntu-latest
+    timeout-minutes: 20   # 전체 히스토리 스캔 — 큰 저장소는 --log-opts 로 범위를 줄인다
+    env:
+      # renovate: datasource=github-releases depName=gitleaks/gitleaks extractVersion=^v(?<version>.*)$
+      GITLEAKS_VERSION: "8.30.1"
+    steps:
+      - name: Checkout (full history)
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+
+      # 자산과 체크섬 파일을 따로 받아 대조한다 — 대조에 실패하면 여기서 멈춘다
+      - name: Install gitleaks (release binary, checksum verified)
+        run: |
+          set -euo pipefail
+          asset="gitleaks_${GITLEAKS_VERSION}_linux_x64.tar.gz"
+          base="https://github.com/gitleaks/gitleaks/releases/download/v${GITLEAKS_VERSION}"
+          cd "$RUNNER_TEMP"
+          curl -fsSLo "$asset" "$base/$asset"
+          curl -fsSLo checksums.txt "$base/gitleaks_${GITLEAKS_VERSION}_checksums.txt"
+          expected="$(grep " $asset\$" checksums.txt | awk '{print $1}')"
+          actual="$(sha256sum "$asset" | awk '{print $1}')"
+          test -n "$expected" && test "$expected" = "$actual"
+          mkdir -p bin && tar -xzf "$asset" -C bin gitleaks
+          echo "$RUNNER_TEMP/bin" >> "$GITHUB_PATH"
+
+      - name: Scan git history for secrets
+        run: |
+          config=""
+          if [ -f .gitleaks.toml ]; then config="--config .gitleaks.toml"; fi
+          # shellcheck disable=SC2086
+          gitleaks git $config --redact --verbose --exit-code 1 .
+
+  # ──────────────────────────────────────────────────────────────────────────
+  # Trivy — 의존성 취약점 · IaC 설정 · 시크릿
+  # ──────────────────────────────────────────────────────────────────────────
+  trivy:
+    name: trivy
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          persist-credentials: false
+
+      - name: Trivy filesystem scan
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
+        with:
+          scan-type: fs
+          scan-ref: .
+          scanners: vuln,misconfig   # secret 은 gitleaks 가 맡는다 (중복 오탐 방지)
+          severity: CRITICAL,HIGH
+          ignore-unfixed: true
+          exit-code: "1"
+
+  # ──────────────────────────────────────────────────────────────────────────
+  # 집계 — ruleset 이 요구하는 단일 체크. 스캐너가 하나라도 실패·취소·건너뜀이면 실패
+  # ──────────────────────────────────────────────────────────────────────────
+  security-review:
+    name: security-review
+    needs: [semgrep, gitleaks, trivy]
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - name: Aggregate scanner results
+        env:
+          RESULTS: ${{ toJSON(needs) }}
+        run: |
+          echo "$RESULTS" | jq -r 'to_entries[] | "\(.key): \(.value.result)"'
+          echo "$RESULTS" | jq -e 'all(.[]; .result == "success")' >/dev/null \
+            || { echo "::error::보안 스캐너 중 실패가 있습니다 — 위 결과를 확인하세요"; exit 1; }

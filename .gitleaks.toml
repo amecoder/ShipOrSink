@@ -1,12 +1,34 @@
-# Documentation examples flagged by the generic-api-key rule. Allow only these exact strings.
+title = "sos standards gitleaks config"
+
 [extend]
 useDefault = true
 
 [[allowlists]]
-description = "docs: example values, not secrets"
-regexTarget = "line"
+description = "Documentation placeholders"
+# AND: placeholder text AND doc/example path must both match.
+# Default OR would skip every .md file entirely (real secrets in docs went undetected).
+# Note: `gitleaks dir` still skips files by path alone — scan with `gitleaks git` (as security-review does).
+condition = "AND"
 regexes = [
-  '''bcrypt/argon2 with salt''',
-  '''"access_token": "eyJhbGciOiJSUzI1NiIs\.\.\."''',
-  '''API_KEY = "sk-proj-abc123xyz789"  # NEVER''',
+  '''example_(key|token|secret)''',
+  '''your_(api_)?(key|token|secret)_here''',
+  '''changeme'''
+]
+paths = [
+  '''.*\.md$''',
+  '''.*\.example$''',
+  '''.*\.sample$''',
+  '''.*\.template$'''
+]
+
+[[rules]]
+id = "generic-env-secret"
+description = "Generic secret-like environment assignment"
+regex = '''(?i)(?:secret|token|password|api[_-]?key)\s*=\s*['"]?([A-Za-z0-9_\-]{20,})['"]?'''
+keywords = [
+  "secret",
+  "token",
+  "password",
+  "api_key",
+  "apikey"
 ]

@@ -1,0 +1,3 @@
+<!-- tests/enforcement-csharp.bats fixture — the library under test. Everything else (TargetFramework, analyzers,
+     TreatWarningsAsErrors) comes from csharp-dotnet/templates/Directory.Build.props, copied next to it. -->
+<Project Sdk="Microsoft.NET.Sdk" />

@@ -36,7 +36,7 @@
 #   }
 # }
 
-# shellcheck source=common/hooks/receipt-lib.sh
+# shellcheck source=SCRIPTDIR/receipt-lib.sh
 source "$(dirname "${BASH_SOURCE[0]}")/receipt-lib.sh"
 
 INPUT=$(cat)

@@ -12,13 +12,15 @@ sos 를 원래 저장소(`amecoder/dev-standards`) 없이 혼자 운영할 수 �
 - `.dev-standards.manifest`·`dev-standards:issue-gate` 같은 프로그램용 이름은 유지, 주석·라벨 이름표만 sos 로
 - 협업 장치(이슈 폼·라벨·ruleset·CODEOWNERS·PR 템플릿·PR 정책·보안 리뷰 게이트·ai-ready 가드)는 PR 2 에 같이 넣는다
 - `.clinerules-*` 는 옮기지 않는다
+- Renovate 설정(`renovate.json`·`renovate.yml`)은 PR 4 가 아니라 PR 2 에서 같이 넣는다(2026-11-27 사용자 결정) — PR 2 판정 기준 "실패 61 이하"는 그대로, `template-freshness.yml` 도 PR 2 로 당겼다(같은 날 결정) — PR 4 에는 릴리스 절차·CHANGELOG 규칙만 남는다
 - 원래 저장소의 이력 문서는 옮기지 않는다 — 이 저장소는 공개라 비공개 내용을 넣지 않는다
+- sos 설정은 글로벌 `~/.claude` 와 따로 `plugins/sos/standards/common/` 한 곳에만 둔다. ShipOrSink 저장소 자신에게는 `.claude/`·`.githooks/` 를 깔지 않는다 — dogfooding 테스트에서 그 비교를 지웠다. `.github/` 협업 파일은 이 저장소용이라 넣고, 템플릿과의 비교도 남긴다
 
 ### 진행 상태
 | PR | 브랜치 | 상태 |
 |---|---|---|
 | 1 | `feat/standalone-1-install-docs` | ✅ PR #1 머지 (squash 2502d42, 2026-11-27) — 안내 92→0줄, `standards/README.md` 설명서, 이름표·복사 흔적 정리, 테스트 4/4 |
-| 2 | `feat/standalone-2-tests-ci` | ⬜ |
+| 2 | `feat/standalone-2-tests-ci` | 구현·검증 끝, 커밋 전 — 운영 파일·Renovate·최신성 검사 이식, 테스트 루트 변수 분리(`REPO_ROOT`=표준 · `PROJECT_ROOT`=저장소), `--help` 색 코드 수정. bats 실패 97 → 63 (샌드박스): 도구 다운로드 막힘 61 + 샌드박스 gh 1(밖에서 통과) + AGENTS 한도 1(PR 3) · pins 5/5 |
 | 3 | `feat/standalone-3-agent-docs` | ⬜ |
 | 4 | `feat/standalone-4-maintenance` | ⬜ |
 

@@ -1,0 +1,13 @@
+# Versions of the fixture's own build (not shipped). ArchUnit comes from the templates.
+[versions]
+kotlin = "2.4.21"
+junit = "6.1.3"
+spring = "7.0.10"
+
+[libraries]
+junit-bom = { module = "org.junit:junit-bom", version.ref = "junit" }
+spring-context = { module = "org.springframework:spring-context", version.ref = "spring" }
+spring-web = { module = "org.springframework:spring-web", version.ref = "spring" }
+
+[plugins]
+kotlin-jvm = { id = "org.jetbrains.kotlin.jvm", version.ref = "kotlin" }

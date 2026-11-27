@@ -1,0 +1,391 @@
+# ============================================================================
+# ShipOrSink 자체 CI — sos 플러그인과 그 안의 표준(plugins/sos/standards/)을 검사한다
+# ============================================================================
+#   shellcheck      : 저장소의 셸 스크립트 + bats 파일 + 헬퍼
+#   actionlint      : CI 템플릿 · 보안 템플릿 · GitHub 템플릿 · 이 저장소의 워크플로우
+#   python          : 표준 훅 Python(hooklib.py)의 ruff check · ruff format --check · mypy --strict (도구 버전 고정)
+#   bats            : tests/*.bats (훅 계약 · PR 정책 · apply.sh · 템플릿 일관성 · 드리프트 · 언어별 강제) + tests/test-*.sh (sos 스킬·훅)
+#   markdownlint    : 마크다운 (.markdownlint.yaml 기준)
+#   apply-dry-run   : 4개 레벨 dry-run 이 오류 없이 끝나는지
+#   zizmor          : 배포 워크플로 템플릿의 보안 지적 0건 (zizmor 기본 persona · 오프라인 감사)
+#   renovate-config : renovate.json 검증 + Renovate 를 추출 모드로 실제 실행해 # renovate: 주석이 모두 읽히는지
+# 도구 설치는 scripts/install-dev-tools.sh 를 그대로 쓴다 (--pm apt 로 러너의 apt 경로 강제 → 폴백 경로까지 검증).
+# 트리거: PR 에서만 자동 실행. main 확인은 Actions 에서 수동 실행(workflow_dispatch).
+#   PR CI 는 마지막 push 시점의 병합 결과(refs/pull/N/merge)로 돈다 — 그 뒤 다른 PR 이 먼저 머지되면 낡는다.
+# ============================================================================
+
+name: CI
+
+on:
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+# Tool versions — one place, one `# renovate:` annotation each (tests/pins.bats). Steps reference them.
+env:
+  # renovate: datasource=github-releases depName=rhysd/actionlint extractVersion=^v(?<version>.*)$
+  ACTIONLINT_VERSION: "1.7.12"
+  # renovate: datasource=pypi depName=ruff
+  RUFF_VERSION: "0.15.4"
+  # renovate: datasource=pypi depName=mypy
+  MYPY_VERSION: "1.13.0"
+  # renovate: datasource=pypi depName=zizmor
+  ZIZMOR_VERSION: "1.32.0"
+  # tests/enforcement-python.bats — uvx runs the template's ruff rev; pytest-cov runs the template coverage step
+  # renovate: datasource=pypi depName=uv
+  UV_VERSION: "0.13.6"
+  # renovate: datasource=pypi depName=pytest
+  PYTEST_VERSION: "9.2.0"
+  # renovate: datasource=pypi depName=pytest-cov
+  PYTEST_COV_VERSION: "7.1.0"
+  # tests/enforcement-pbt.bats — uvx runs common/testing-templates/property-example.py with this Hypothesis
+  # renovate: datasource=pypi depName=hypothesis
+  HYPOTHESIS_VERSION: "6.170.15"
+  # renovate: datasource=npm depName=markdownlint-cli2
+  MARKDOWNLINT_CLI2_VERSION: "0.23.2"
+  # Renovate bumps a version only — the sha256 next to it then fails `sha256sum -c` until a human verifies the new hash.
+  # renovate: datasource=github-releases depName=golangci/golangci-lint extractVersion=^v(?<version>.*)$
+  GOLANGCI_LINT_VERSION: "2.15.0"
+  GOLANGCI_LINT_SHA256: "9b7fe6a6bf6334b98decf8d86b11415ea7889afdabdd1959fdce23af2a9ebcea"   # linux-amd64 tar.gz
+  # renovate: datasource=github-releases depName=EmbarkStudios/cargo-deny
+  CARGO_DENY_VERSION: "0.20.2"
+  CARGO_DENY_SHA256: "9f12ed4c49936e09b48bf862b595cde2fe64fcbd9d74dfacac6131ca824c8d5f"      # x86_64-unknown-linux-musl tar.gz
+  # = common/ci-templates/ci-api-contract.yml env (tests/enforcement-api-contract.bats) — bump both together, and the sha256
+  # renovate: datasource=github-releases depName=oasdiff/oasdiff extractVersion=^v(?<version>.*)$
+  OASDIFF_VERSION: "1.35.0"
+  OASDIFF_SHA256: "a8023002fcb2eaa7f5758148a9303cb63d33b939886df312268bc0fc7b939140"         # linux_amd64 tar.gz
+  # renovate: datasource=github-releases depName=bufbuild/buf extractVersion=^v(?<version>.*)$
+  BUF_VERSION: "1.75.0"
+  BUF_SHA256: "fad1e38d6909bbb583a4da81d8c02a01046e2cd663bde7e337dd24277393764b"             # buf-Linux-x86_64
+  # = java-spring/templates/quality.gradle.kts checkstyle toolVersion (tests/enforcement-java.bats) — bump both together, and the sha256
+  # renovate: datasource=github-releases depName=checkstyle/checkstyle extractVersion=^checkstyle-(?<version>.*)$
+  CHECKSTYLE_VERSION: "14.4.0"
+  CHECKSTYLE_SHA256: "c0a521e54eabd1ece4ff7bd84cf231b012615745ed3aa4fb27ab0ca73097250c"     # checkstyle-<v>-all.jar
+  # = kotlin-spring/templates/libs-quality.versions.toml detekt (tests/enforcement-kotlin.bats) — bump both together, and the sha256
+  # renovate: datasource=github-releases depName=detekt/detekt extractVersion=^v(?<version>.*)$
+  DETEKT_VERSION: "2.0.0-alpha.6"
+  DETEKT_SHA256: "d46ca62ea4d62769b5d5c3ba94d49fa9b80ba11c7dba74ddb6df7fcc2c19c5fd"         # detekt-cli-<v>-all.jar
+  # tests/enforcement-dart.bats — must satisfy flutter-dart/templates/tool/quality_metrics/pubspec.yaml sdk (^3.13.0)
+  # renovate: datasource=github-tags depName=dart-lang/sdk
+  DART_VERSION: "3.13.7"
+  # = java-spring quality.gradle.kts toolchain · kotlin-spring jvmToolchain (tests/enforcement-*-gradle.bats need exactly this)
+  # renovate: datasource=java-version depName=java-jdk versioning=semver-partial
+  JAVA_VERSION: "25"
+  # tests/enforcement-swift.bats — runs the template .swiftlint.yml (SourceKit comes from the runner's Swift toolchain)
+  # renovate: datasource=github-releases depName=realm/SwiftLint
+  SWIFTLINT_VERSION: "0.65.1"
+  SWIFTLINT_SHA256: "caeed6f4a679c35539ffaf124f6c4ab4a8416917f7d8796279dc52b74026059d"     # swiftlint_linux_amd64.zip
+  # tests/enforcement-ruby.bats — tests/enforcement-ruby/Gemfile.lock (simplecov 1.3.2 needs Ruby >= 3.3)
+  # renovate: datasource=ruby-version depName=ruby versioning=semver-partial
+  RUBY_VERSION: "3.3"
+  # = common/ci-templates/ci-typescript.yml NODE_VERSION (tests/enforcement.bats)
+  # renovate: datasource=node-version depName=node versioning=semver-partial
+  NODE_VERSION: "24"
+  # = .github/workflows/renovate.yml RENOVATE_VERSION — the validator runs the same pinned image
+  # renovate: datasource=docker depName=ghcr.io/renovatebot/renovate
+  RENOVATE_VERSION: "44.211.0@sha256:43725f6de17255edab0d7c448b150d91b6165a35cecaa78444543d418d0bd3d5"
+
+jobs:
+  shellcheck:
+    name: shellcheck
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          persist-credentials: false
+
+      # shellcheck 는 ubuntu 러너에 기본 설치되어 있다
+      - name: shellcheck all shell scripts
+        run: |
+          shellcheck --version | head -2
+          mapfile -t files < <(git ls-files '*.sh' '*.bats' 'tests/*.bash')
+          shellcheck -x "${files[@]}"
+
+  actionlint:
+    name: actionlint
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          persist-credentials: false
+
+      - name: Install actionlint (pinned, go install)
+        run: go install "github.com/rhysd/actionlint/cmd/actionlint@v${ACTIONLINT_VERSION}"
+
+      - name: Lint workflow templates and repo workflows
+        run: |
+          export PATH="$(go env GOPATH)/bin:$PATH"
+          actionlint -shellcheck= \
+            plugins/sos/standards/common/ci-templates/*.yml \
+            plugins/sos/standards/common/security-templates/*-ci.yml \
+            plugins/sos/standards/common/security-templates/security-review.yml \
+            plugins/sos/standards/common/github-templates/workflows/*.yml \
+            .github/workflows/*.yml
+
+  python:
+    name: python
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          persist-credentials: false
+
+      # 새 액션 없이 러너의 python3 로 venv — 버전은 로컬 검증 명령과 같게 고정
+      - name: Install ruff · mypy (pinned)
+        run: |
+          python3 -m venv "$RUNNER_TEMP/py"
+          "$RUNNER_TEMP/py/bin/pip" install --quiet "ruff==${RUFF_VERSION}" "mypy==${MYPY_VERSION}"
+
+      # 배포용 템플릿(python/·*/templates/)은 대상이 아니다 — 사용자 프로젝트에 훅으로 깔리는 hooklib.py 만 본다
+      - name: ruff check · ruff format --check · mypy --strict
+        run: |
+          export PATH="$RUNNER_TEMP/py/bin:$PATH"
+          python3 --version
+          targets=(plugins/sos/standards/common/hooks/hooklib.py)
+          ruff check "${targets[@]}"
+          ruff format --check "${targets[@]}"
+          mypy --strict --python-version 3.12 "${targets[@]}"   # 러너(ubuntu-latest) 기준 — 로컬 버전과 무관하게 같은 판정
+
+  bats:
+    name: bats
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          persist-credentials: false
+
+      - name: Install test tools with the repo installer (apt path + fallbacks)
+        run: bash scripts/install-dev-tools.sh --yes --pm apt
+
+      # tests/template-configs.bats 가 배포 템플릿 설정을 실제 도구로 실행 검증한다 (버전·해시 고정)
+      - name: Install template-config tools (golangci-lint, cargo-deny — pinned + sha256)
+        run: |
+          set -euo pipefail
+          bin="$HOME/.local/bin"; mkdir -p "$bin"; tmp="$(mktemp -d)"
+          gl="golangci-lint-${GOLANGCI_LINT_VERSION}-linux-amd64"
+          curl -fsSL -o "$tmp/$gl.tar.gz" "https://github.com/golangci/golangci-lint/releases/download/v${GOLANGCI_LINT_VERSION}/$gl.tar.gz"
+          echo "${GOLANGCI_LINT_SHA256}  $tmp/$gl.tar.gz" | sha256sum -c -
+          tar -xzf "$tmp/$gl.tar.gz" -C "$tmp" && install "$tmp/$gl/golangci-lint" "$bin/"
+          cdeny="cargo-deny-${CARGO_DENY_VERSION}-x86_64-unknown-linux-musl"
+          curl -fsSL -o "$tmp/$cdeny.tar.gz" "https://github.com/EmbarkStudios/cargo-deny/releases/download/${CARGO_DENY_VERSION}/$cdeny.tar.gz"
+          echo "${CARGO_DENY_SHA256}  $tmp/$cdeny.tar.gz" | sha256sum -c -
+          tar -xzf "$tmp/$cdeny.tar.gz" -C "$tmp" && install "$tmp/$cdeny/cargo-deny" "$bin/"
+
+      # tests/enforcement-api-contract.bats — the versions common/ci-templates/ci-api-contract.yml installs
+      - name: Install API contract tools (oasdiff, buf — pinned + sha256)
+        run: |
+          set -euo pipefail
+          bin="$HOME/.local/bin"; mkdir -p "$bin"; tmp="$(mktemp -d)"
+          oas="oasdiff_${OASDIFF_VERSION}_linux_amd64.tar.gz"
+          curl -fsSL -o "$tmp/$oas" "https://github.com/oasdiff/oasdiff/releases/download/v${OASDIFF_VERSION}/$oas"
+          echo "${OASDIFF_SHA256}  $tmp/$oas" | sha256sum -c -
+          tar -xzf "$tmp/$oas" -C "$tmp" oasdiff && install "$tmp/oasdiff" "$bin/"
+          curl -fsSL -o "$tmp/buf" "https://github.com/bufbuild/buf/releases/download/v${BUF_VERSION}/buf-Linux-x86_64"
+          echo "${BUF_SHA256}  $tmp/buf" | sha256sum -c -
+          install -m 755 "$tmp/buf" "$bin/buf"
+
+      # tests/enforcement.bats (TypeScript) — the exact lockfile-pinned set bootstrap installs, outside the repo
+      - name: Setup Node.js (TypeScript enforcement tools)
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+          cache-dependency-path: tests/enforcement-ts/package-lock.json
+
+      - name: Install TypeScript enforcement tools (npm ci, lockfile-pinned, no install scripts)
+        run: |
+          set -euo pipefail
+          dir="$RUNNER_TEMP/ts-tools"; mkdir -p "$dir"
+          cp tests/enforcement-ts/package.json tests/enforcement-ts/package-lock.json "$dir/"
+          npm ci --prefix "$dir" --no-audit --no-fund --ignore-scripts
+
+      # tests/enforcement-python.bats — one pip step in the existing job (no new job: Actions minutes)
+      - name: Install Python enforcement tools (pinned)
+        run: |
+          set -euo pipefail
+          pipx install --quiet "uv==${UV_VERSION}"
+          pipx install --quiet "pytest==${PYTEST_VERSION}"
+          pipx inject --quiet pytest "pytest-cov==${PYTEST_COV_VERSION}"
+
+      # JDK for every Java/Kotlin enforcement test: checkstyle 14 needs 21+, the Gradle template tests need exactly the
+      # template toolchain (25), detekt 2.0.0-alpha.6 runs on 25 — one JDK for all of them (sets JAVA_HOME and PATH)
+      - name: Setup Java (template toolchain)
+        uses: actions/setup-java@77dd5b2ce225ea11469928ac317850245a74ae78 # v6.2.0
+        with:
+          distribution: temurin
+          java-version: ${{ env.JAVA_VERSION }}
+
+      # tests/enforcement-java.bats · enforcement-kotlin.bats — the checkstyle / detekt the Gradle templates run, as
+      # single jars on that JDK
+      - name: Install Java · Kotlin enforcement tools (checkstyle · detekt-cli all-jars — pinned + sha256)
+        run: |
+          set -euo pipefail
+          jar="$RUNNER_TEMP/checkstyle-all.jar"
+          curl -fsSL -o "$jar" "https://github.com/checkstyle/checkstyle/releases/download/checkstyle-${CHECKSTYLE_VERSION}/checkstyle-${CHECKSTYLE_VERSION}-all.jar"
+          echo "${CHECKSTYLE_SHA256}  $jar" | sha256sum -c -
+          jar="$RUNNER_TEMP/detekt-cli-all.jar"
+          curl -fsSL -o "$jar" "https://github.com/detekt/detekt/releases/download/v${DETEKT_VERSION}/detekt-cli-${DETEKT_VERSION}-all.jar"
+          echo "${DETEKT_SHA256}  $jar" | sha256sum -c -
+
+      # tests/enforcement-swift.bats — SwiftLint (Linux build); the Swift toolchain on ubuntu runners provides SourceKit
+      - name: Install Swift enforcement tools (swiftlint — pinned + sha256)
+        run: |
+          set -euo pipefail
+          tmp="$(mktemp -d)"; zip="$tmp/swiftlint_linux_amd64.zip"
+          curl -fsSL -o "$zip" "https://github.com/realm/SwiftLint/releases/download/${SWIFTLINT_VERSION}/swiftlint_linux_amd64.zip"
+          echo "${SWIFTLINT_SHA256}  $zip" | sha256sum -c -
+          unzip -q "$zip" swiftlint -d "$tmp" && install "$tmp/swiftlint" "$HOME/.local/bin/"
+          swift --version
+
+      # tests/enforcement-ruby.bats — the lockfile-pinned RuboCop / RSpec / SimpleCov set (simplecov 1.3 needs Ruby >= 3.3)
+      - name: Setup Ruby (Ruby enforcement)
+        uses: ruby/setup-ruby@7f797815d8adceb1c412e7abefdd1ab4abc47a5f # v1.335.0
+        with:
+          ruby-version: ${{ env.RUBY_VERSION }}
+
+      - name: Install Ruby enforcement gems (bundle install, lockfile-pinned)
+        env:
+          BUNDLE_GEMFILE: tests/enforcement-ruby/Gemfile
+          BUNDLE_PATH: ${{ runner.temp }}/ruby-gems
+          BUNDLE_FROZEN: "true"
+        run: |
+          ruby --version
+          bundle install --quiet
+
+      # tests/enforcement-csharp.bats — the SDK the template global.json pins (8.0.404, latestFeature)
+      - name: Setup .NET (C# enforcement — template global.json)
+        uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6.0.0
+        with:
+          global-json-file: plugins/sos/standards/csharp-dotnet/templates/global.json
+
+      # tests/enforcement-dart.bats — runs the template tool/quality_metrics (package:analyzer) through the hooks
+      - name: Setup Dart (Dart enforcement)
+        uses: dart-lang/setup-dart@6afc89df92d6eb3834022f73cd65adc8cdfcb92d # v1.8.1
+        with:
+          sdk: ${{ env.DART_VERSION }}
+
+      - name: Run bats
+        env:
+          TEMPLATE_TOOLS_REQUIRED: "1"   # 도구가 없으면 template-configs.bats · enforcement*.bats 가 skip 이 아니라 실패
+          TS_TOOLS_DIR: ${{ runner.temp }}/ts-tools
+          CHECKSTYLE_JAR: ${{ runner.temp }}/checkstyle-all.jar
+          DETEKT_JAR: ${{ runner.temp }}/detekt-cli-all.jar
+          BUNDLE_PATH: ${{ runner.temp }}/ruby-gems
+          GH_TOKEN: ${{ github.token }}   # read-only (contents: read) — lets the SHA-pin existence test run instead of skip
+        run: |
+          export PATH="$HOME/.local/bin:$(go env GOPATH)/bin:$PATH"
+          bash scripts/install-dev-tools.sh --check
+          bats --version
+          yq --version   # tests 가 워크플로 YAML 을 읽는다 — ubuntu 러너 기본 설치(mikefarah v4)
+          bats --print-output-on-failure tests/
+          for t in tests/test-*.sh; do bash "$t"; done
+
+  zizmor:
+    name: zizmor
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          persist-credentials: false
+
+      - name: Install zizmor (pinned)
+        run: |
+          python3 -m venv "$RUNNER_TEMP/zz"
+          "$RUNNER_TEMP/zz/bin/pip" install --quiet --only-binary=:all: "zizmor==${ZIZMOR_VERSION}"
+
+      # 배포 템플릿만 대상 — 이 저장소 자신의 워크플로는 actionlint 만 본다
+      # 지적이 하나라도 있으면 exit≠0 (기준선 2026-11-04: 45건 → 0)
+      - name: Audit workflow templates
+        run: |
+          "$RUNNER_TEMP/zz/bin/zizmor" --version
+          # --strict-collection: an input that fails schema validation fails the job (default: WARN + skipped)
+          # --no-config / --no-ignores: a zizmor.yml or `zizmor: ignore` comment cannot weaken the gate
+          "$RUNNER_TEMP/zz/bin/zizmor" --no-online-audits --strict-collection --no-config --no-ignores \
+            plugins/sos/standards/common/ci-templates/*.yml \
+            plugins/sos/standards/common/security-templates/*.yml \
+            plugins/sos/standards/common/github-templates/workflows/*.yml
+
+  renovate-config:
+    name: renovate-config
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          persist-credentials: false
+
+      # the same pinned image renovate.yml runs — no unlocked `npm install renovate`
+      - name: Validate renovate.json
+        run: docker run --rm -v "$PWD:/repo:ro" -w /repo "ghcr.io/renovatebot/renovate:${RENOVATE_VERSION}" renovate-config-validator --strict
+
+      # extract only (no lookups, no token): every `# renovate:` / `// renovate:` annotation anywhere in the repo must
+      # become a dependency — one the regex cannot read, or one in a file no manager covers, would never be updated.
+      - name: Every annotated pin is extracted by Renovate
+        run: |
+          set -euo pipefail
+          out="$RUNNER_TEMP/renovate-out"; mkdir -p "$out"; chmod 777 "$out"
+          docker run --rm -v "$PWD:/repo:ro" -v "$out:/out" -w /repo \
+            -e LOG_LEVEL=warn -e RENOVATE_REPORT_TYPE=file -e RENOVATE_REPORT_PATH=/out/report.json \
+            "ghcr.io/renovatebot/renovate:${RENOVATE_VERSION}" \
+            sh -c 'git config --global --add safe.directory /repo && renovate --platform=local --dry-run=extract'
+          report="$out/report.json"
+          ann='^[[:space:]]*(#|//) renovate: datasource='
+          bad=0
+          while IFS= read -r f; do
+            if [ "$f" = plugins/sos/standards/typescript-react/templates/dev-dependencies.txt ]; then
+              want="$(grep -cvE '^#|^$' "$f" || true)"
+            else
+              want="$(grep -cE "$ann" "$f" || true)"   # annotation lines only, not pattern text in scripts
+            fi
+            got="$(jq -r --arg f "$f" '[.repositories.local.packageFiles.regex[]? | select(.packageFile == $f) | .deps[]] | length' "$report")"
+            echo "$f annotations=$want extracted=$got"
+            [ "$got" = "$want" ] || { echo "::error file=$f::$want pins but Renovate extracted $got"; bad=1; }
+          done < <(git grep -lE "$ann" -- . ':!docs' ':!tests' ':!*.md'; echo plugins/sos/standards/typescript-react/templates/dev-dependencies.txt)
+          exit "$bad"
+
+  markdownlint:
+    name: markdownlint
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          persist-credentials: false
+
+      - name: Install markdownlint-cli2 (pinned)
+        run: npm install -g "markdownlint-cli2@${MARKDOWNLINT_CLI2_VERSION}"
+
+      - name: Lint markdown
+        run: markdownlint-cli2 "**/*.md"
+
+  apply-dry-run:
+    name: apply-dry-run-${{ matrix.level }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        level: [slim, standard, full, enterprise]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          persist-credentials: false
+
+      - name: Dry-run apply at level ${{ matrix.level }}
+        env:
+          LEVEL: ${{ matrix.level }}
+        run: |
+          mkdir -p "$RUNNER_TEMP/target"
+          bash plugins/sos/standards/apply.sh --level "$LEVEL" --dry-run --target "$RUNNER_TEMP/target"
