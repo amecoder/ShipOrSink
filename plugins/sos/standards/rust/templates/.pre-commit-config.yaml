@@ -74,7 +74,7 @@ repos:
         args: ["--baseline", ".secrets.baseline"]
 
   # ── file size limit ────────────────────────────────────────────────────────
-  # Rust files: 800 lines max (consistent with dev-standards policy)
+  # Rust files: 800 lines max (sos standards/common/quality-thresholds.yaml)
   - repo: local
     hooks:
       - id: file-size-limit

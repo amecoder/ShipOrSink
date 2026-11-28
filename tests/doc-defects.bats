@@ -1,6 +1,6 @@
 #!/usr/bin/env bats
 # tests/doc-defects.bats — 규칙·가이드 문서에서 확인된 결함이 다시 들어오지 않게 막는다.
-# 근거: 원래 dev-standards 저장소의 문서 결함 조사 · mutmut 3.8.1 실측(2026-11-04)
+# 근거: 문서 결함 조사 · mutmut 3.8.1 실측(2026-11-04)
 
 load helpers
 

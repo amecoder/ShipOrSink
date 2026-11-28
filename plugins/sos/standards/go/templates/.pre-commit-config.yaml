@@ -78,7 +78,7 @@ repos:
         args: ["--baseline", ".secrets.baseline"]
 
   # ── file size limit ───────────────────────────────────────────────────────
-  # Go files: 800 lines max (consistent with dev-standards policy)
+  # Go files: 800 lines max (sos standards/common/quality-thresholds.yaml)
   - repo: local
     hooks:
       - id: file-size-limit

@@ -131,8 +131,8 @@ disabled_rules:
 
 # ── Rule configurations ──────────────────────────────────────────────────────
 # The pre-commit hook runs `swiftlint lint --strict`: a warning fails the run too, so the `warning` number is the
-# real limit of every rule below. The three quality limits therefore set warning = error (dev-standards
-# common/quality-thresholds.yaml, verified by tests/enforcement-swift.bats).
+# real limit of every rule below. The three quality limits therefore set warning = error (sos
+# standards/common/quality-thresholds.yaml, verified by ShipOrSink tests/enforcement-swift.bats).
 
 # Complexity — SwiftLint counts branches only (no +1, no ?: / && / ||; case ignored below):
 # 14 here = "1 + branches <= 15" in the standard's terms

@@ -59,7 +59,7 @@ repos:
 
   # ── 함수 길이 제한 (50줄) ────────────────────────────────────────────────
   # ruff 에는 함수 줄 수 규칙이 없다 (PLR0915 는 문장 수). def 줄부터 마지막 줄까지 물리 줄 수를 센다 —
-  # 데코레이터는 빼고, 본문의 빈 줄·주석은 센다. 정본: dev-standards common/quality-thresholds.yaml
+  # 데코레이터는 빼고, 본문의 빈 줄·주석은 센다. 정본: sos standards/common/quality-thresholds.yaml
   - repo: local
     hooks:
       - id: function-length
