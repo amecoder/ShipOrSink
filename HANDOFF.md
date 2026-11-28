@@ -37,8 +37,11 @@ sos 를 원래 저장소(비공개 dev-standards) 없이 혼자 운영할 수 �
 - 플러그인 버전은 PR 4 에서 0.2.0 으로 올렸다(2026-11-27 사용자 결정)
 
 ### 나중에 할 것 (PR 2 첫 CI 에서 나옴)
-- CI bats 잡을 `ubuntu-24.04` 로 고정했다. `ubuntu-latest`(=26.04, 2026-11)에서는 SwiftLint 리눅스 바이너리가 `libxml2.so.2` 를 못 찾고, pytest 단계 2개가 `PYTHONPATH=src` 를 주고도 fixture 패키지를 못 불러왔다(원인 미확인 — pipx 의 격리 실행 추정). 26.04 로 옮기려면 이 둘을 먼저 고친다
-- 같은 이유로 사용자에게 깔리는 CI 템플릿(`common/ci-templates/*.yml`)도 `ubuntu-latest` 라 26.04 에서 같은 문제가 날 수 있다 — 확인 필요
+- CI bats 잡은 `ubuntu-24.04` 고정. 2026-11-28 draft PR #6 으로 26.04 에서 시험했다(닫음·브랜치 삭제). 실패 5개, 원인 2가지:
+  - SwiftLint 검사 4개 — 리눅스 바이너리가 `libxml2.so.2` 를 못 찾는다(exit 127). 26.04 로 옮기려면 SwiftLint 설치 방식을 먼저 바꾼다
+  - actionlint 검사 1개 — 핀 버전 1.7.12 가 `ubuntu-26.04` 라벨을 모른다. 26.04 를 아는 actionlint 버전으로 올려야 한다
+  - 예전에 본 pytest `PYTHONPATH` 실패는 이번에 재현되지 않았다
+- 사용자 CI 템플릿(`common/ci-templates/*.yml`, `ubuntu-latest` 6개)에는 Swift 템플릿이 없어 SwiftLint 문제는 해당 없다. 템플릿 워크플로 자체를 26.04 에서 돌려 보지는 않았다
 
 ### 결정 대기
 - ruleset(main-protection-solo)은 보류(2026-11-28 사용자 결정) — 걸면 머지 뒤 main 직접 문서 커밋이 막힌다. 라벨 11개만 반영했다
@@ -47,7 +50,7 @@ sos 를 원래 저장소(비공개 dev-standards) 없이 혼자 운영할 수 �
 - architecture 그림은 다시 그리지 않는다 — 원래 그림은 autopilot 이 있던 옛 구조다. 구조 설명은 README·CLAUDE.md 로 충분하다
 
 ### 로컬 환경 메모
-- 이 머신에서 Dart 훅 검사(exit 126)와 Ruby 검사(`bundle install` 실패) 10개가 main 에서도 실패한다. CI 에서는 통과 — 원인 미확인
+- 이 머신의 Dart·Ruby 검사 10개 실패는 asdf 기본 버전이 없어서였다. `~/.tool-versions` 에 `dart 3.13.7`·`ruby 3.3.13` 을 더해 16/16 통과(2026-11-28)
 
 ### 주의
 - 커밋·push·PR 은 사용자가 요청할 때만
