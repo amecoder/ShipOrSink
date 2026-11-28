@@ -5,7 +5,7 @@
 sos 를 원래 저장소(비공개 dev-standards) 없이 혼자 운영할 수 있게 보강한다. 원래 저장소는 프리징된다.
 조사·계획 정본: `docs/reports/2026-11-27_sos-단독-운영-보강-조사.md` — 먼저 읽는다.
 
-**단독 운영 보강 PR 4개 모두 머지 (2026-11-28).** 다음: `v0.2.0` 태그·GitHub 릴리스(승인 대기) — 절차는 `CLAUDE.md` 「릴리스」.
+**단독 운영 보강 PR 4개 모두 머지 (2026-11-28).** `v0.2.0` 태그·GitHub 릴리스 생성(2026-11-28, `a60e5b0`). 다음 릴리스 절차는 `CLAUDE.md` 「릴리스」.
 
 ### 사용자 결정 (2026-11-27)
 - PR 네 개로 나눠 순서대로 진행: 1 설치 안내·설명서 → 2 테스트·CI·협업 장치 → 3 CLAUDE.md·AGENTS.md → 4 유지보수
@@ -41,7 +41,6 @@ sos 를 원래 저장소(비공개 dev-standards) 없이 혼자 운영할 수 �
 - 같은 이유로 사용자에게 깔리는 CI 템플릿(`common/ci-templates/*.yml`)도 `ubuntu-latest` 라 26.04 에서 같은 문제가 날 수 있다 — 확인 필요
 
 ### 결정 대기
-- `v0.2.0` 태그와 GitHub 릴리스 만들기 — 대상 커밋 `a60e5b0`, 본문은 CHANGELOG 의 0.2.0 절
 - 라벨·ruleset 을 GitHub 에 반영할지 — `bash .github/scripts/apply-github-settings.sh --dry-run` 결과부터 본다
 
 ### 로컬 환경 메모
