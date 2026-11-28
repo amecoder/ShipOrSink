@@ -227,8 +227,7 @@ checkout_persist_values() {
 #   name: string, 1-64 chars, [a-z0-9] and single hyphens, no leading/trailing hyphen, equals the parent directory
 #   description: string, 1-1024 chars · compatibility (optional): string, 1-500 chars · frontmatter: valid YAML
 #   between a first-line --- and a closing ---. Lengths are Unicode characters (Python), not bytes — locale-proof.
-# Scope: common/skills (what apply.sh --only skills ships). autopilot/skills are Claude Code plugin commands
-# (no name field by design) and are not Agent Skills.
+# Scope: common/skills (what apply.sh --only skills ships).
 SKILL_CHECK_PY='
 import json, re, sys
 d, fm = sys.argv[1], json.load(sys.stdin)

@@ -45,7 +45,7 @@ Layout/EndAlignment:
 # ── Metrics ───────────────────────────────────────────────────────────────
 # rubocop-rails-omakase disables the whole Metrics department ("All cops except your using extensions are
 # disabled by default") — a cop with only `Max:` stays off. Every cop below needs `Enabled: true`
-# (dev-standards tests/enforcement-ruby.bats verifies MethodLength 50 / CyclomaticComplexity 15).
+# (ShipOrSink tests/enforcement-ruby.bats verifies MethodLength 50 / CyclomaticComplexity 15).
 Metrics/MethodLength:
   Enabled: true
   Max: 50  # 함수 50줄 제한 (전사 표준)

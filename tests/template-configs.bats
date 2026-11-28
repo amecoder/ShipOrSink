@@ -1,6 +1,6 @@
 #!/usr/bin/env bats
 # tests/template-configs.bats — 배포 템플릿의 설정을 "실제 도구"가 받아들이고 약속대로 검사하는지 실행으로 확인한다.
-# 근거: 원래 dev-standards 저장소의 표준 최신성 조사 (값은 맞는데 도구가 키를 무시·거부하던 결함들)
+# 근거: 표준 최신성 조사 (값은 맞는데 도구가 키를 무시·거부하던 결함들)
 # 도구가 없으면 로컬에서는 skip, CI(TEMPLATE_TOOLS_REQUIRED=1)에서는 실패 — CI 에서 조용히 건너뛰지 않게 한다.
 
 load helpers
