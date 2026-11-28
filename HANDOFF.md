@@ -47,6 +47,7 @@ sos 를 원래 저장소(비공개 dev-standards) 없이 혼자 운영할 수 �
 - ruleset(main-protection-solo)은 보류(2026-11-28 사용자 결정) — 걸면 머지 뒤 main 직접 문서 커밋이 막힌다. 라벨 11개만 반영했다
 
 ### 정한 것 (2026-11-28)
+- bats 잡의 26.04 이전은 미룬다 — GitHub 가 `ubuntu-24.04` 러너 종료를 공지하면 옮긴다. 할 일은 「나중에 할 것」의 SwiftLint 설치 방식·actionlint 버전 두 가지
 - architecture 그림은 다시 그리지 않는다 — 원래 그림은 autopilot 이 있던 옛 구조다. 구조 설명은 README·CLAUDE.md 로 충분하다
 
 ### 로컬 환경 메모
