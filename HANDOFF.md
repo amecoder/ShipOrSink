@@ -41,8 +41,10 @@ sos 를 원래 저장소(비공개 dev-standards) 없이 혼자 운영할 수 �
 - 같은 이유로 사용자에게 깔리는 CI 템플릿(`common/ci-templates/*.yml`)도 `ubuntu-latest` 라 26.04 에서 같은 문제가 날 수 있다 — 확인 필요
 
 ### 결정 대기
-- architecture 그림(저장소 구조도·강제 장치 흐름 등)을 새 저장소 설명용으로 다시 그릴지 — 원래 저장소 그림은 이력 문서로 묶어 옮기지 않았다
 - ruleset(main-protection-solo)은 보류(2026-11-28 사용자 결정) — 걸면 머지 뒤 main 직접 문서 커밋이 막힌다. 라벨 11개만 반영했다
+
+### 정한 것 (2026-11-28)
+- architecture 그림은 다시 그리지 않는다 — 원래 그림은 autopilot 이 있던 옛 구조다. 구조 설명은 README·CLAUDE.md 로 충분하다
 
 ### 로컬 환경 메모
 - 이 머신에서 Dart 훅 검사(exit 126)와 Ruby 검사(`bundle install` 실패) 10개가 main 에서도 실패한다. CI 에서는 통과 — 원인 미확인
