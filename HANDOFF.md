@@ -43,7 +43,6 @@ sos 를 원래 저장소(비공개 dev-standards) 없이 혼자 운영할 수 �
 ### 결정 대기
 - architecture 그림(저장소 구조도·강제 장치 흐름 등)을 새 저장소 설명용으로 다시 그릴지 — 원래 저장소 그림은 이력 문서로 묶어 옮기지 않았다
 - ruleset(main-protection-solo)은 보류(2026-11-28 사용자 결정) — 걸면 머지 뒤 main 직접 문서 커밋이 막힌다. 라벨 11개만 반영했다
-- 라벨·ruleset 을 GitHub 에 반영할지 — `bash .github/scripts/apply-github-settings.sh --dry-run` 결과부터 본다
 
 ### 로컬 환경 메모
 - 이 머신에서 Dart 훅 검사(exit 126)와 Ruby 검사(`bundle install` 실패) 10개가 main 에서도 실패한다. CI 에서는 통과 — 원인 미확인
