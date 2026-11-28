@@ -33,8 +33,17 @@ tests/             # bats(표준 검사) + test-*.sh(스킬·훅 검사) — 플
 - **CI bats 잡은 `ubuntu-24.04` 고정**: `ubuntu-latest`(26.04)에서는 SwiftLint 리눅스 바이너리가 `libxml2.so.2` 를 못 찾는다
 - **품질 기준**: 커버리지 ≥80%, 복잡도 ≤15, 함수 ≤50줄, 파일 ≤800줄 — 정본 `plugins/sos/standards/common/quality-thresholds.yaml`. 언어 템플릿 설정을 바꾸면 `tests/enforcement*.bats`(한도는 통과, 한도+1 은 실패를 실제 도구로 확인)가 통과해야 한다
 - **새 언어 추가**: `plugins/sos/standards/<lang>/bootstrap.sh` + `templates/` + `README.md`, 그리고 `apply.sh` 의 언어 목록
-- **표준을 바꾸면 플러그인 버전을 올린다**: 버전이 그대로면 사용자 설치본이 갱신되지 않는다(`plugins/sos/.claude-plugin/plugin.json`)
+- **표준을 바꾸면 플러그인 버전을 올린다**: 버전이 그대로면 사용자 설치본이 갱신되지 않는다(`plugins/sos/.claude-plugin/plugin.json`) — 절차는 아래 「릴리스」
 - **공개 저장소**: 로컬 경로, 개인 정보, 비공개 저장소 이름을 넣지 않는다
+
+## 릴리스
+
+`plugins/sos/` 아래(스킬·훅·표준)가 바뀐 머지가 쌓이면 릴리스한다. 문서·테스트·CI 만 바뀐 머지는 다음 릴리스에 묶는다.
+
+1. **매 머지**: 머지 직후 main 에서 `CHANGELOG.md` 의 `## 다음 릴리스` 맨 위에 PR 한 줄을 더하고 `HANDOFF.md` 를 갱신한다
+2. **버전 정하기**: `X.Y.Z` 정식판만 쓴다. 고치기만 했으면 Z, 표준·스킬을 더하거나 동작을 바꿨으면 Y 를 올린다. 사용자 프로젝트가 고쳐야 하는 변경(프로그램이 읽는 이름 바꾸기 등)은 1.0 전에는 Y, 1.0 부터는 X 를 올리고 CHANGELOG 에 옮기는 법을 쓴다
+3. **릴리스 PR**: `plugin.json` 의 `version` 을 올리고, `## 다음 릴리스` 를 `## X.Y.Z (YYYY-MM-DD)` 로 바꾼 뒤 위에 빈 `## 다음 릴리스` 를 둔다. `tests/release.bats` 가 두 값이 맞는지 본다
+4. **태그**: 릴리스 PR 을 머지한 뒤 그 커밋에 `vX.Y.Z` 태그와 GitHub 릴리스를 만든다 — 본문은 CHANGELOG 의 그 버전 절이다. 밖으로 나가는 일이라 사람이 승인한 뒤에 한다
 
 ## 주요 커맨드
 

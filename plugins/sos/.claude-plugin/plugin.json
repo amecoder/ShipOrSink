@@ -1,6 +1,6 @@
 {
   "name": "sos",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Ship Or Sink — 기획부터 PR 까지 단계별 개발 스킬. 완료는 done.sh 종료 코드로 판정하고, 잠긴 테스트는 사람이 승인한 TEST-LEDGER 줄로만 바꾼다",
   "author": { "name": "amecoder" },
   "license": "MIT",
