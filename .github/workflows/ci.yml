@@ -160,7 +160,7 @@ jobs:
     # pinned: the enforcement tests were built on ubuntu-24.04. On ubuntu-latest = 26.04 (2026-11) the SwiftLint linux
     # binary cannot load libxml2.so.2 and the pytest steps fail to import the fixture package (PR #2 first CI run).
     # Moving to 26.04 is a separate task (HANDOFF).
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
     steps:
       - name: Checkout
         uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
