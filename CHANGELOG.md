@@ -13,6 +13,10 @@
 
 sos 를 원래 저장소 없이 혼자 운영할 수 있게 보강했다(단독 운영 1~4).
 
+- **#4** `a60e5b0` 기능: 릴리스 절차와 버전 0.2.0 (단독 운영 4/4)
+  - `plugin.json` 버전 0.1.0 → 0.2.0, CHANGELOG 를 버전 절로 묶음
+  - `CLAUDE.md` 「릴리스」 절, `tests/release.bats`(버전과 CHANGELOG 버전 절 일치 검사 4개)
+  - 후속: `v0.2.0` 태그와 GitHub 릴리스는 사람 승인 후
 - **#3** `2fc599e` 문서: CLAUDE.md·AGENTS.md 추가와 출처 주석 정리 (단독 운영 3/4)
   - 루트 `CLAUDE.md`(저장소 관리 규칙)·`AGENTS.md`(공통 작업 규칙) 추가
   - 원래 저장소 출처 주석 4곳 제거, AGENTS.md 32 KiB 한도 테스트 skip 해제
